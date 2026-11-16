@@ -4,8 +4,7 @@ Optimizador de cortes (cutting stock 1D) para perfiles de acero y varillas en ba
 
 ## Cómo acceder
 
-- **Página web:** https://jtej277.github.io/Simulador-de-cortes/ (GitHub Pages, publicada desde la rama `main`). No hace falta cuenta ni instalar nada; cada dispositivo guarda sus propios datos.
-- **Artifact en Claude:** https://claude.ai/artifact/63UaFWQEQmDU7CZDUeuGAS (hay que tener acceso compartido por el dueño).
+- **Página web:** https://jtej277.github.io/Simulador-de-cortes/ . No hace falta cuenta ni instalar nada; cada dispositivo guarda sus propios datos.
 - **Sin conexión:** descargá `index.html` y abrilo en el navegador.
 
 ## Archivos
