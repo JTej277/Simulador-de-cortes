@@ -1,0 +1,938 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>Simulador de Cortes</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@600;700&display=swap">
+<style>
+/* Layout: banda superior fija con 4 pestañas grandes; una columna de paneles; las barras son el protagonista. */
+:root{
+  --bg:#e3e7eb; --surface:#f4f6f8; --panel:#ffffff; --ink:#131c24; --muted:#52606c; --line:#b7c1ca;
+  --accent:#f2b705; --accent-ink:#1c1500; --blue:#1456a8; --ok:#1c7d45; --bad:#bf2a2a;
+  --head:#1b252d; --head-ink:#eef2f5; --head-muted:#9fb0bd;
+  --ok-bg:#d8efdf; --bad-bg:#f8dcdc; --bar-bg:#1b252d;
+  --p0:#8fc1e8; --p1:#f5c75a; --p2:#c3a6ea; --p3:#7fd1c7; --p4:#f2a373; --p5:#eea3c2; --p6:#b8c4d0; --p7:#cfd87a; --p-ink:#10181f;
+  --display:"Barlow Semi Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#11171c; --surface:#182026; --panel:#202a32; --ink:#e8edf1; --muted:#9aa8b3; --line:#3b4954;
+  --accent:#f5c211; --accent-ink:#1c1500; --blue:#74b4ff; --ok:#56c988; --bad:#ff8078;
+  --head:#0b1014; --head-ink:#eef2f5; --head-muted:#8b9ba8;
+  --ok-bg:#17382a; --bad-bg:#4a2020; --bar-bg:#05080a;
+  color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#11171c; --surface:#182026; --panel:#202a32; --ink:#e8edf1; --muted:#9aa8b3; --line:#3b4954;
+  --accent:#f5c211; --accent-ink:#1c1500; --blue:#74b4ff; --ok:#56c988; --bad:#ff8078;
+  --head:#0b1014; --head-ink:#eef2f5; --head-muted:#8b9ba8;
+  --ok-bg:#17382a; --bad-bg:#4a2020; --bar-bg:#05080a;
+  color-scheme:dark }
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.4;font-variant-numeric:tabular-nums}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--head)}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;line-height:1.15}
+h2{font-size:1.45rem} h3{font-size:1.15rem}
+p{margin:0}
+.wrap{max-width:980px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--head);color:var(--head-ink)}
+.top .wrap{padding-block:10px 0}
+.brand{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.brand h1{font-size:1.35rem;letter-spacing:.02em;text-transform:uppercase}
+.brand small{color:var(--head-muted);font-size:.8rem;white-space:nowrap}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:8px}
+.tabs button{appearance:none;border:0;background:transparent;color:var(--head-muted);font:600 .95rem var(--display);letter-spacing:.03em;text-transform:uppercase;min-height:52px;padding:4px 2px;border-radius:6px 6px 0 0;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+.tabs button b{font-size:.72rem;font-weight:700;opacity:.75}
+.tabs button[aria-selected="true"]{background:var(--bg);color:var(--ink)}
+.stripe{height:6px;background:repeating-linear-gradient(135deg,var(--accent) 0 12px,var(--head) 12px 24px)}
+
+main.wrap{padding-block:16px 96px;display:flex;flex-direction:column;gap:16px}
+section.tab{display:flex;flex-direction:column;gap:16px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.hint{color:var(--muted);font-size:.9rem}
+.note{background:var(--surface);border:1px dashed var(--line);border-radius:8px;padding:10px 12px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.note.warn{border:2px solid var(--accent);border-style:solid}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:.82rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;min-width:0}
+label.f.wide{grid-column:1/-1}
+input[type=text],input[type=number],select{font:500 1.1rem var(--body);color:var(--ink);background:var(--surface);border:2px solid var(--line);border-radius:6px;min-height:52px;padding:8px 10px;width:100%;min-width:0}
+input:focus-visible,select:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+label.chk{display:flex;align-items:center;gap:10px;min-height:52px;font-weight:600;cursor:pointer}
+label.chk input{width:28px;height:28px;accent-color:var(--blue);flex:none}
+
+.btn{appearance:none;font:700 1.05rem var(--display);letter-spacing:.03em;text-transform:uppercase;min-height:52px;padding:8px 16px;border-radius:6px;border:2px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-align:center}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.big{min-height:64px;font-size:1.25rem;width:100%}
+.btn.sm{min-height:44px;font-size:.9rem;padding:6px 12px}
+.btn.danger{color:var(--bad)}
+.btn[data-armed]{background:var(--bad);border-color:var(--bad);color:#fff}
+.btn:disabled{opacity:.55;cursor:default}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.row.end{justify-content:flex-end}
+.grow{flex:1 1 160px}
+
+details.add>summary{list-style:none;cursor:pointer}
+details.add>summary::-webkit-details-marker{display:none}
+
+.grp{display:flex;flex-direction:column;gap:6px}
+.grp>h3{display:flex;justify-content:space-between;gap:10px;align-items:baseline;flex-wrap:wrap;border-bottom:2px solid var(--line);padding-bottom:4px}
+.grp>h3 span{font:500 .88rem var(--body);color:var(--muted)}
+.item{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.item:last-child{border-bottom:0}
+.item .main{flex:1 1 180px;min-width:0}
+.item .main b{font-size:1.1rem}
+.item .meta{color:var(--muted);font-size:.88rem;overflow-wrap:anywhere}
+.chip{display:inline-block;font-size:.75rem;font-weight:700;padding:2px 7px;border-radius:99px;border:1px solid var(--line);color:var(--muted);text-transform:uppercase;letter-spacing:.03em;white-space:nowrap}
+.chip.ok{background:var(--ok-bg);color:var(--ok);border-color:var(--ok)}
+.chip.bad{background:var(--bad-bg);color:var(--bad);border-color:var(--bad)}
+
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px;min-width:0}
+.kpi .l{font-size:.75rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.kpi .v{font:700 1.7rem var(--display);line-height:1.1}
+.kpi .s{font-size:.82rem;color:var(--muted)}
+.save{background:var(--ok-bg);border:2px solid var(--ok);border-radius:8px;padding:12px 14px}
+.save b{font:700 1.3rem var(--display)}
+
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.95rem}
+th,td{padding:7px 8px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left;white-space:normal}
+thead th{font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+td.best{font-weight:700}
+.seg-ctl{display:grid;grid-template-columns:repeat(3,1fr);border:2px solid var(--line);border-radius:6px;overflow:hidden}
+.seg-ctl button{appearance:none;border:0;background:var(--surface);color:var(--ink);font:700 .9rem var(--display);text-transform:uppercase;letter-spacing:.03em;min-height:48px;cursor:pointer;padding:4px}
+.seg-ctl button+button{border-left:2px solid var(--line)}
+.seg-ctl button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+
+.legend{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:.85rem}
+.legend i{display:inline-block;width:16px;height:16px;border-radius:3px;vertical-align:-3px;margin-right:4px;border:1px solid var(--bar-bg)}
+.bars{display:flex;flex-direction:column;gap:8px}
+.barcard{border:1px solid var(--line);border-radius:8px;background:var(--surface);overflow:hidden}
+.barcard.done{border-color:var(--ok)}
+.barbtn{appearance:none;border:0;background:transparent;color:inherit;font:inherit;text-align:left;width:100%;padding:8px 10px 10px;cursor:pointer;display:flex;flex-direction:column;gap:6px}
+.barhead{display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap;font-size:.9rem}
+.barhead b{font:700 1.05rem var(--display)}
+.bar{display:flex;gap:2px;height:46px;background:var(--bar-bg);border:2px solid var(--bar-bg);border-radius:4px;overflow:hidden}
+.sg{flex:1 1 0;min-width:2px;container-type:inline-size;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;color:var(--p-ink);line-height:1.05}
+.sg span{display:none;white-space:nowrap;font-weight:700;font-size:.8rem}
+.sg span.et{font-weight:500;font-size:.68rem;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+@container (min-width:34px){.sg span.ln{display:block}}
+@container (min-width:76px){.sg span.et{display:block}}
+.sg.hecho{opacity:.45}
+.sg.ret{background:repeating-linear-gradient(45deg,#9ad6ae 0 6px,#d9f2e1 6px 12px)}
+.sg.scr{background:repeating-linear-gradient(45deg,#e88b8b 0 6px,#f9dcdc 6px 12px)}
+.sg.dsp{background:repeating-linear-gradient(90deg,#8d99a3 0 3px,#c9d1d8 3px 6px)}
+.cuts{border-top:1px solid var(--line);padding:6px 10px 10px;display:flex;flex-direction:column;gap:4px}
+.cut{display:flex;align-items:center;gap:10px;padding:4px 0;border-bottom:1px solid var(--line)}
+.cut:last-of-type{border-bottom:0}
+.cut .n{font:700 1rem var(--display);color:var(--muted);width:1.6em;text-align:right;flex:none}
+.cut .d{flex:1;min-width:0}
+.cut .d b{font-size:1.1rem}
+.cut .mk{text-align:right;flex:none}
+.cut .mk b{font:700 1.2rem var(--display);display:block}
+.cut .mk small{color:var(--muted);font-size:.7rem;text-transform:uppercase;letter-spacing:.04em}
+.cut.hecho .d,.cut.hecho .mk{text-decoration:line-through;opacity:.5}
+.tick{appearance:none;width:52px;height:52px;border-radius:6px;border:2px solid var(--line);background:var(--panel);color:transparent;font-size:1.6rem;font-weight:700;cursor:pointer;flex:none}
+.tick[aria-pressed="true"]{background:var(--ok);border-color:var(--ok);color:#fff}
+
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:8px;font-weight:600;z-index:20;max-width:calc(100% - 32px);text-align:center;box-shadow:0 4px 16px rgba(0,0,0,.3)}
+
+/* Hoja de corte: es papel, colores fijos en los dos temas */
+.hoja{background:#fff;color:#000;border:1px solid #777;border-radius:4px;padding:18px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.35;overflow-x:auto}
+@media print{
+  body{background:#fff}
+  .top,main>section:not(#tab-hoja),#toast,.noprint{display:none!important}
+  main.wrap{padding:0;max-width:none}
+  #tab-hoja{display:block!important}
+  .hoja{border:0;padding:0;overflow:visible}
+}
+@media (max-width:480px){ .brand small{display:none} .tabs button{font-size:.82rem} table{font-size:.82rem} th,td{padding:6px 4px} thead th{white-space:normal;font-size:.68rem} }
+@media (prefers-reduced-motion:no-preference){ .btn,.tick,.tabs button{transition:background-color .12s} }
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand"><h1>Simulador de Cortes</h1><small id="sync">Guardado en este dispositivo</small></div>
+    <nav class="tabs" role="tablist" aria-label="Pasos">
+      <button role="tab" data-tab="mat" id="t-mat"><b>1</b>Materiales</button>
+      <button role="tab" data-tab="cor" id="t-cor"><b>2</b>Cortes</button>
+      <button role="tab" data-tab="res" id="t-res"><b>3</b>Resultado</button>
+      <button role="tab" data-tab="ret" id="t-ret"><b>4</b>Retazos</button>
+    </nav>
+  </div>
+  <div class="stripe"></div>
+</header>
+
+<main class="wrap">
+
+<section class="tab" id="tab-mat" hidden>
+  <details class="add panel" id="m-det">
+    <summary class="btn pri big" id="m-sum">+ Agregar material</summary>
+    <form id="m-form" class="grid" autocomplete="off">
+      <label class="f">Tipo<select id="m-tipo"></select></label>
+      <label class="f">Medida o sección<input type="text" id="m-nombre" placeholder='Ej. Ángulo 1¼" x 1/8"' required></label>
+      <label class="f">Largo de barra (mm)<input type="number" id="m-largo" inputmode="numeric" min="1" step="1" value="6000" required></label>
+      <label class="f">Peso (kg/m)<input type="number" id="m-kgm" inputmode="decimal" min="0" step="0.001" value="0"></label>
+      <label class="f">Precio<input type="number" id="m-precio" inputmode="decimal" min="0" step="0.01" value="0"></label>
+      <label class="f">El precio es<select id="m-modo"><option value="kg">por kg</option><option value="barra">por barra</option></select></label>
+      <label class="f">Alto del perfil (mm), para ingletes<input type="number" id="m-ancho" inputmode="decimal" min="0" step="0.1" value="0"></label>
+      <div class="row wide" style="grid-column:1/-1">
+        <button class="btn pri grow" type="submit" id="m-ok">Guardar material</button>
+        <button class="btn" type="button" data-act="m-cancel">Cancelar</button>
+      </div>
+    </form>
+  </details>
+  <div class="note"><p class="hint">Los precios y pesos precargados son de referencia. Poné los de tu proveedor: de ahí salen los costos.</p></div>
+  <div class="panel" id="m-list"></div>
+  <div class="panel">
+    <h3>Catálogo en archivo</h3>
+    <div class="row">
+      <button class="btn grow" data-act="exp-cat">Exportar catálogo (CSV)</button>
+      <button class="btn grow" data-act="imp">Importar CSV o JSON</button>
+    </div>
+  </div>
+</section>
+
+<section class="tab" id="tab-cor" hidden>
+  <div class="panel">
+    <h2 id="c-title">Cargar corte</h2>
+    <form id="c-form" class="grid" autocomplete="off">
+      <label class="f wide">Material<select id="c-mat"></select></label>
+      <label class="f">Largo (mm)<input type="number" id="c-largo" inputmode="decimal" min="1" step="0.1" required></label>
+      <label class="f">Cantidad<input type="number" id="c-cant" inputmode="numeric" min="1" step="1" value="1" required></label>
+      <label class="f wide">Etiqueta (opcional)<input type="text" id="c-et" placeholder="Ej. parante puerta" maxlength="40"></label>
+      <label class="chk wide" style="grid-column:1/-1"><input type="checkbox" id="c-ing">Corte a inglete</label>
+      <div class="grid wide" id="c-ingbox" style="grid-column:1/-1" hidden>
+        <label class="f">Ángulo (grados)<input type="number" id="c-ang" inputmode="decimal" min="1" max="75" step="0.5" value="45"></label>
+        <label class="f">Extremos a inglete<select id="c-ext"><option value="2">Los dos</option><option value="1">Uno solo</option></select></label>
+        <label class="f">El largo está medido en<select id="c-ref"><option value="corta">Punta corta (lado interno)</option><option value="larga">Punta larga (lado externo)</option></select></label>
+        <p class="hint" id="c-real" style="grid-column:1/-1"></p>
+      </div>
+      <div class="row" style="grid-column:1/-1">
+        <button class="btn pri grow" type="submit" id="c-ok">Agregar corte</button>
+        <button class="btn" type="button" data-act="c-cancel" id="c-cancel" hidden>Cancelar</button>
+      </div>
+    </form>
+  </div>
+  <div id="c-ej"></div>
+  <div class="panel" id="c-list"></div>
+  <div class="panel">
+    <h3>Parámetros de corte</h3>
+    <div class="grid">
+      <label class="f">Espesor del disco (mm)<input type="number" id="p-kerf" inputmode="decimal" min="0" step="0.1"></label>
+      <label class="f">Despunte por barra (mm)<input type="number" id="p-desp" inputmode="decimal" min="0" step="1"></label>
+      <label class="f">Retazo útil desde (mm)<input type="number" id="p-min" inputmode="numeric" min="0" step="1"></label>
+    </div>
+    <label class="chk"><input type="checkbox" id="p-usar">Usar primero los retazos del stock</label>
+    <p class="hint">Todo sobrante más corto que el mínimo se cuenta como scrap.</p>
+  </div>
+  <button class="btn pri big" data-act="optimizar">Optimizar cortes</button>
+  <div class="panel">
+    <h3>Lista en archivo</h3>
+    <div class="row">
+      <button class="btn grow" data-act="exp-cor">Exportar cortes (CSV)</button>
+      <button class="btn grow" data-act="imp">Importar CSV o JSON</button>
+      <button class="btn danger grow" data-act="c-clear" data-confirm="Tocá otra vez para vaciar">Vaciar lista</button>
+    </div>
+  </div>
+</section>
+
+<section class="tab" id="tab-res" hidden></section>
+
+<section class="tab" id="tab-hoja" hidden>
+  <div class="panel noprint">
+    <h2>Hoja de corte</h2>
+    <div class="row">
+      <button class="btn pri grow" data-act="imprimir">Imprimir</button>
+      <button class="btn grow" data-act="bajar-hoja">Descargar hoja</button>
+      <button class="btn" data-act="volver">Volver</button>
+    </div>
+    <p class="hint">Si "Imprimir" no abre nada, descargá la hoja, abrila en el navegador y desde ahí imprimila o guardala como PDF.</p>
+  </div>
+  <div class="hoja" id="hoja"></div>
+</section>
+
+<section class="tab" id="tab-ret" hidden>
+  <div class="panel">
+    <h2 id="r-title">Agregar retazo</h2>
+    <form id="r-form" class="grid" autocomplete="off">
+      <label class="f wide">Material<select id="r-mat"></select></label>
+      <label class="f">Largo (mm)<input type="number" id="r-largo" inputmode="decimal" min="1" step="0.1" required></label>
+      <label class="f">Cantidad<input type="number" id="r-cant" inputmode="numeric" min="1" step="1" value="1" required></label>
+      <div class="row" style="grid-column:1/-1">
+        <button class="btn pri grow" type="submit" id="r-ok">Agregar retazo</button>
+        <button class="btn" type="button" data-act="r-cancel" id="r-cancel" hidden>Cancelar</button>
+      </div>
+    </form>
+  </div>
+  <div class="panel" id="r-list"></div>
+  <div class="panel">
+    <h3>Copia de seguridad</h3>
+    <p class="hint">Un solo archivo con catálogo, cortes, retazos y parámetros.</p>
+    <div class="row">
+      <button class="btn grow" data-act="exp-todo">Exportar todo (JSON)</button>
+      <button class="btn grow" data-act="imp">Importar CSV o JSON</button>
+      <button class="btn danger grow" data-act="reset" data-confirm="Tocá otra vez: se borra todo">Volver al ejemplo</button>
+    </div>
+  </div>
+</section>
+
+</main>
+<input type="file" id="imp-file" accept=".csv,.json,.txt,text/csv,application/json" hidden>
+<div id="toast" role="status" hidden></div>
+
+<script id="core">
+/* ===== Motor de optimización (sin DOM, se prueba con Node) ===== */
+const Corte = (() => {
+  const rng = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+
+  /* Largo que ocupa la pieza en la barra. Si la medida es en punta corta, cada inglete suma alto·tan(ángulo). */
+  function largoReal(p, alto) {
+    let l = +p.largo || 0;
+    if (p.ang > 0 && p.ref === 'corta') l += (p.ext === 1 ? 1 : 2) * (alto || 0) * Math.tan(Math.min(p.ang, 80) * Math.PI / 180);
+    return Math.ceil(l - 1e-6);
+  }
+
+  /* o: {piezas:[{len,cant}], L, kerf, desp, minRet, retazos:[mm], ms} */
+  function resolver(o) {
+    const t0 = now();
+    const nums = [o.L, o.kerf, o.desp, o.minRet, ...o.retazos, ...o.piezas.map(p => p.len)];
+    const S = nums.every(Number.isInteger) ? 1 : 10;           // unidades enteras: mm o décimas
+    const U = x => Math.round(x * S);
+    const k = U(o.kerf), d = U(o.desp), LB = U(o.L), capB = LB - d + k, minR = U(o.minRet);
+    const rets = o.retazos.map((mm, i) => ({ rid: i, L: U(mm), cap: U(mm) + k }));
+    const maxCap = Math.max(capB, ...rets.map(r => r.cap));
+    const items = [], noEntra = [];
+    o.piezas.forEach((p, pi) => {
+      const len = U(p.len), eff = len + k;                       // cada pieza "paga" un kerf; la barra tiene un kerf de yapa
+      if (len <= 0 || p.cant <= 0) return;
+      if (eff > capB) { noEntra.push({ pi, len: p.len, cant: p.cant }); return; }
+      for (let c = 0; c < p.cant; c++) items.push({ len, eff, pi, ord: items.length });
+    });
+    const rnd = rng(12345 + items.length);
+    const mk = r => r ? { tipo: 'retazo', L: r.L, cap: r.cap, rid: r.rid, used: 0, items: [] }
+                      : { tipo: 'barra', L: LB, cap: capB, rid: -1, used: 0, items: [] };
+    const left = b => Math.max(0, b.cap - k - b.used);
+    const escalon = Math.max(1, minR);
+    const sqRets = rets.reduce((s, r) => s + r.L * r.L, 0);
+    /* Criterio: 1) menos barras nuevas 2) menos scrap, en escalones del largo mínimo de retazo (diferencias chicas empatan)
+       3) sobrantes útiles concentrados: suma de cuadrados de los retazos que quedan, los del plan y los del stock sin tocar
+       4) menos scrap */
+    function costo(bins) {
+      let nb = 0, scrap = 0, sq = sqRets;
+      for (const b of bins) {
+        const l = left(b);
+        if (b.tipo === 'barra') nb++; else sq -= b.L * b.L;
+        if (l < minR) scrap += l; else sq += l * l;
+      }
+      return [nb, Math.floor(scrap / escalon), -sq, scrap];
+    }
+    const cmp = (a, b) => a[0] - b[0] || a[1] - b[1] || a[2] - b[2] || a[3] - b[3];
+    const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+    /* nf = en orden, sin planificar; ff = First Fit; bf = Best Fit */
+    function greedy(list, mode) {
+      const bins = [], libres = rets.slice().sort((a, b) => a.L - b.L);
+      let cur = null;
+      for (const it of list) {
+        let b = null;
+        if (mode === 'nf') { if (cur && cur.used + it.eff <= cur.cap) b = cur; }
+        else for (const x of bins) {
+          if (x.used + it.eff > x.cap) continue;
+          if (mode === 'ff') { b = x; break; }
+          if (!b || x.cap - x.used < b.cap - b.used) b = x;
+        }
+        if (!b) {
+          const j = libres.findIndex(r => r.cap >= it.eff);
+          b = j >= 0 ? mk(libres.splice(j, 1)[0]) : mk();
+          bins.push(b); cur = b;
+        }
+        b.items.push(it); b.used += it.eff;
+      }
+      return bins;
+    }
+
+    /* Subconjunto que mejor llena "cap" (suma de subconjuntos, programación dinámica). Devuelve índices en orden decreciente. */
+    let buf = new Int32Array(0);
+    function dpFill(list, cap) {
+      if (cap <= 0 || !list.length) return [];
+      if (buf.length < cap + 1) buf = new Int32Array(cap + 1);
+      buf.fill(-1, 0, cap + 1); buf[0] = -2;
+      let top = 0;
+      for (let i = 0; i < list.length; i++) {
+        const e = list[i].eff; if (e > cap) continue;
+        const hi = Math.min(cap, top + e);
+        for (let s = hi; s >= e; s--) if (buf[s] === -1 && buf[s - e] !== -1) buf[s] = i;
+        top = hi; if (buf[cap] !== -1) break;
+      }
+      let s = cap; while (buf[s] === -1) s--;
+      const out = []; while (s > 0) { const i = buf[s]; out.push(i); s -= list[i].eff; }
+      return out;
+    }
+
+    /* Llenado barra por barra: se siembra la pieza más larga y se completa con el mejor subconjunto. */
+    function mbs(list, retOrder, azar, pSkip, pSeed) {
+      const rem = list.slice(), bins = [];
+      if (azar) shuffle(rem);
+      const take = (b, idx) => { for (const i of idx) { b.items.push(rem[i]); b.used += rem[i].eff; rem.splice(i, 1); } };
+      for (const r of retOrder) {
+        if (!rem.length) break;
+        if (azar && rnd() < pSkip) continue;
+        const idx = dpFill(rem, r.cap);
+        if (idx.length) { const b = mk(r); take(b, idx); bins.push(b); }
+      }
+      while (rem.length) {
+        let si = 0;
+        if (azar && rnd() < pSeed) si = Math.floor(rnd() * rem.length);
+        else for (let i = 1; i < rem.length; i++) if (rem[i].eff > rem[si].eff) si = i;
+        let b = mk();
+        const seed = rem.splice(si, 1)[0];
+        if (seed.eff > b.cap) {                                   // solo entra en un retazo largo que quedó sin usar
+          const usados = new Set(bins.filter(x => x.rid >= 0).map(x => x.rid));
+          const r = retOrder.find(x => !usados.has(x.rid) && x.cap >= seed.eff);
+          if (r) b = mk(r);
+        }
+        b.items.push(seed); b.used = seed.eff;
+        take(b, dpFill(rem, b.cap - b.used));
+        bins.push(b);
+      }
+      return bins;
+    }
+
+    /* Búsqueda exacta (branch and bound) de la mínima cantidad de barras nuevas, para problemas chicos. */
+    function exacto(sorted, bestNb, lb, nodeMax) {
+      const n = sorted.length, suf = new Array(n + 1).fill(0);
+      for (let i = n - 1; i >= 0; i--) suf[i] = suf[i + 1] + sorted[i].eff;
+      const rU = rets.slice().sort((a, b) => b.cap - a.cap), usado = rU.map(() => false);
+      let retFree = rU.reduce((s, r) => s + r.cap, 0), nodes = 0, sol = null, completo = true, fin = false;
+      const bins = [];
+      (function dfs(i, nb, free) {
+        if (fin || nb >= bestNb) return;
+        if (i === n) { bestNb = nb; sol = bins.map(b => ({ r: b.r, items: b.items.slice() })); if (nb <= lb) fin = true; return; }
+        if (++nodes > nodeMax) { completo = false; fin = true; return; }
+        const need = suf[i] - free - retFree;
+        if (need > 0 && nb + Math.ceil(need / capB) >= bestNb) return;
+        const it = sorted[i], e = it.eff, seen = new Set();
+        for (const b of bins) {
+          if (b.rem < e || seen.has(b.rem)) continue;
+          seen.add(b.rem); b.rem -= e; b.items.push(it);
+          dfs(i + 1, nb, free - e);
+          b.items.pop(); b.rem += e; if (fin) return;
+        }
+        for (let j = 0; j < rU.length; j++) {
+          const c = rU[j].cap; if (usado[j] || c < e || seen.has(c)) continue;
+          seen.add(c); usado[j] = true; retFree -= c; bins.push({ rem: c - e, r: rU[j], items: [it] });
+          dfs(i + 1, nb, free + c - e);
+          bins.pop(); retFree += c; usado[j] = false; if (fin) return;
+        }
+        if (nb + 1 < bestNb && e <= capB && !seen.has(capB)) {
+          bins.push({ rem: capB - e, r: null, items: [it] });
+          dfs(i + 1, nb + 1, free + capB - e);
+          bins.pop();
+        }
+      })(0, 0, 0);
+      const out = sol && sol.map(x => { const b = mk(x.r); b.items = x.items; b.used = x.items.reduce((s, y) => s + y.eff, 0); return b; });
+      return { bins: out, completo: completo };
+    }
+
+    /* Búsqueda local "romper y rearmar": desarma algunas barras y las vuelve a llenar. */
+    function mejorar(best, budget, maxIter) {
+      let bc = costo(best), it = 0;
+      for (; it < maxIter; it++) {
+        if ((it & 15) === 0 && now() - t0 > budget) break;
+        const n = best.length; if (!n) break;
+        const pick = new Set();
+        if (rnd() < 0.7) { let w = -1; best.forEach((b, i) => { if (b.tipo === 'barra' && (w < 0 || left(b) > left(best[w]))) w = i; }); if (w >= 0) pick.add(w); }
+        for (let e = 1 + Math.floor(rnd() * 3); e > 0; e--) pick.add(Math.floor(rnd() * n));
+        const freed = [], kept = [];
+        best.forEach((b, i) => { if (pick.has(i)) freed.push(...b.items); else kept.push(b); });
+        const usados = new Set(kept.filter(b => b.rid >= 0).map(b => b.rid));
+        const disp = shuffle(rets.filter(r => !usados.has(r.rid)));
+        const cand = kept.concat(mbs(freed, disp, true, 0.3, 0.3)), cc = costo(cand);
+        if (cmp(cc, bc) <= 0) { best = cand; bc = cc; }
+      }
+      return { bins: best, iter: it };
+    }
+
+    const sorted = items.slice().sort((a, b) => b.eff - a.eff || a.ord - b.ord);
+    const sinPlan = greedy(items, 'nf'), ffd = greedy(sorted, 'ff'), bfd = greedy(sorted, 'bf');
+    let best = [ffd, bfd, mbs(sorted, rets.slice().sort((a, b) => a.L - b.L), false)].reduce((a, b) => cmp(costo(b), costo(a)) < 0 ? b : a);
+    const sumEff = items.reduce((s, x) => s + x.eff, 0), sumRet = rets.reduce((s, r) => s + r.cap, 0);
+    const lb = Math.max(0, Math.ceil((sumEff - sumRet) / capB));
+    let probado = costo(best)[0] <= lb, usoExacto = false;
+    if (!probado && items.length <= 40) {
+      const ex = exacto(sorted, costo(best)[0], lb, 150000); usoExacto = true;
+      if (ex.bins) best = ex.bins;
+      if (ex.completo) probado = true;
+    }
+    const mj = mejorar(best, o.ms || 250, 6000);
+    best = mj.bins;
+
+    /* Salida en mm, con la cuenta de cada barra cerrada: L = despunte + piezas + viruta + sobrante */
+    function salida(bins, ordenar) {
+      const st = { barras: 0, retUs: 0, tomado: 0, piezas: 0, scrap: 0, util: 0, viruta: 0, nUtil: 0, nPiezas: 0 };
+      let bs = bins.map(b => {
+        const cortes = b.items.map(x => ({ l: x.len / S, p: x.pi }));
+        if (ordenar) cortes.sort((a, c) => c.l - a.l);
+        const pz = b.items.reduce((s, x) => s + x.len, 0), l = left(b), dd = b.tipo === 'barra' ? d : 0;
+        const out = { tipo: b.tipo, L: b.L / S, desp: dd / S, cortes, left: l / S, kerf: (b.L - dd - pz - l) / S, util: l >= minR && l > 0 };
+        if (b.tipo === 'barra') st.barras++; else st.retUs++;
+        st.tomado += out.L; st.piezas += pz / S; st.viruta += out.kerf + out.desp; st.nPiezas += cortes.length;
+        if (out.util) { st.util += out.left; st.nUtil++; } else st.scrap += out.left;
+        return out;
+      });
+      if (ordenar) bs.sort((a, c) => (a.tipo === 'retazo' ? 0 : 1) - (c.tipo === 'retazo' ? 0 : 1) || a.left - c.left);
+      st.aprov = st.tomado ? st.piezas / st.tomado : 0;                    // piezas ÷ material tomado
+      st.aprov2 = st.tomado ? (st.piezas + st.util) / st.tomado : 0;      // contando el retazo que vuelve al stock
+      return { bins: bs, st };
+    }
+    return { sinPlan: salida(sinPlan, false), simple: salida(ffd, true), opt: salida(best, true),
+             lb, probado, usoExacto, noEntra, iter: mj.iter, ms: Math.round(now() - t0), nItems: items.length };
+  }
+  return { resolver, largoReal };
+})();
+if (typeof module !== 'undefined') module.exports = Corte;
+</script>
+
+<script>
+/* ===== Interfaz ===== */
+(() => {
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const n0 = x => Math.round(x).toLocaleString('es-AR');
+const n1 = x => (+x).toLocaleString('es-AR', { maximumFractionDigits: 1 });
+const mm = x => n1(x) + ' mm';
+const kg = x => n1(x) + ' kg';
+const plata = x => '$ ' + n0(x);
+const pct = x => (x * 100).toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' %';
+const uid = () => Math.random().toString(36).slice(2, 9);
+const num = v => { let s = String(v == null ? '' : v).trim().replace(/\s/g, ''); if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.'); const n = parseFloat(s); return isFinite(n) ? n : 0; };
+
+const TIPOS = ['Tubo estructural cuadrado', 'Tubo estructural rectangular', 'Caño redondo', 'Ángulo (L)', 'Planchuela', 'Perfil UPN', 'Perfil IPN', 'Perfil C', 'Varilla lisa', 'Hierro aletado (ADN 420)', 'Barra maciza cuadrada', 'Barra maciza redonda', 'Otros'];
+const PKG = 3000; // $/kg de ejemplo
+const M = (id, t, nombre, kgm, ancho, largo) => ({ id, tipo: TIPOS[t], nombre, largo: largo || 6000, kgm, modo: 'kg', precio: PKG, ancho });
+const CATALOGO = () => [
+  M('t20', 0, 'Tubo 20x20x1,25', 0.71, 20), M('t30', 0, 'Tubo 30x30x1,6', 1.38, 30), M('t40', 0, 'Tubo 40x40x1,6', 1.88, 40), M('t50', 0, 'Tubo 50x50x2', 2.93, 50),
+  M('r4020', 1, 'Tubo 40x20x1,6', 1.38, 40), M('r6040', 1, 'Tubo 60x40x2', 2.93, 60),
+  M('c1', 2, 'Caño 1" x 1,6', 0.94, 25.4), M('c2', 2, 'Caño 2" x 2', 2.41, 50.8),
+  M('a1', 3, 'Ángulo 1" x 1/8"', 1.19, 25.4), M('a114', 3, 'Ángulo 1¼" x 1/8"', 1.5, 31.8), M('a112', 3, 'Ángulo 1½" x 3/16"', 2.68, 38.1),
+  M('p1', 4, 'Planchuela 1" x 1/8"', 0.63, 25.4), M('p114', 4, 'Planchuela 1¼" x 3/16"', 1.19, 31.8), M('p112', 4, 'Planchuela 1½" x 1/4"', 1.9, 38.1),
+  M('u80', 5, 'UPN 80', 8.64, 80, 12000), M('u100', 5, 'UPN 100', 10.6, 100, 12000),
+  M('i80', 6, 'IPN 80', 5.94, 80, 12000), M('i100', 6, 'IPN 100', 8.34, 100, 12000),
+  M('pc80', 7, 'Perfil C 80x40x15x2', 2.78, 80, 12000), M('pc100', 7, 'Perfil C 100x50x15x2', 3.4, 100, 12000),
+  M('l6', 8, 'Lisa Ø6', 0.222, 6), M('l10', 8, 'Lisa Ø10', 0.617, 10), M('l12', 8, 'Lisa Ø12', 0.888, 12),
+  M('al6', 9, 'Aletado Ø6', 0.222, 6, 12000), M('al8', 9, 'Aletado Ø8', 0.395, 8, 12000), M('al10', 9, 'Aletado Ø10', 0.617, 10, 12000), M('al12', 9, 'Aletado Ø12', 0.888, 12, 12000),
+  M('mc10', 10, 'Cuadrado macizo 10 mm', 0.785, 10), M('mc12', 10, 'Cuadrado macizo ½"', 1.27, 12.7),
+  M('mr16', 11, 'Redondo macizo Ø16', 1.58, 16), M('mr20', 11, 'Redondo macizo Ø20', 2.47, 20)
+];
+const P = (matId, largo, cant, et, ang, ext, ref) => ({ id: uid(), matId, largo, cant, et, ang: ang || 0, ext: ext || 2, ref: ref || 'corta' });
+const EJEMPLO = () => [
+  P('t40', 1800, 2, 'Parante portón', 45, 2, 'larga'), P('t40', 1000, 2, 'Travesaño portón', 45, 2, 'larga'),
+  P('t40', 1900, 1, 'Diagonal portón', 45, 2, 'corta'), P('t40', 2100, 2, 'Poste reja'), P('t40', 1500, 2, 'Marco reja horizontal'), P('t40', 1000, 2, 'Marco reja vertical'), P('t40', 900, 1, 'Travesaño medio'),
+  P('p114', 1420, 4, 'Travesaño reja'), P('p114', 920, 3, 'Travesaño portón'), P('p114', 250, 2, 'Pasador'), P('p114', 120, 6, 'Bisagra'), P('p114', 60, 8, 'Oreja de fijación'),
+  P('al8', 1040, 14, 'Barrote reja'), P('al8', 1720, 9, 'Barrote portón')
+];
+const base = () => ({ v: 1, t: 0, ejemplo: true, mats: CATALOGO(), piezas: EJEMPLO(), ret: [{ id: uid(), matId: 't40', largo: 1450, cant: 1 }, { id: uid(), matId: 'p114', largo: 800, cant: 2 }], par: { kerf: 3, desp: 0, minRet: 300, usar: true }, plan: null, hechos: {}, dirty: false });
+
+let S = base();
+let UI = { tab: 'res', ver: 'opt', abiertas: {} };
+let editM = null, editC = null, editR = null;
+const LS = 'simcortes.v1', LSUI = 'simcortes.ui';
+
+/* ---------- Persistencia ---------- */
+function cargar() {
+  try { const r = localStorage.getItem(LS); if (r) { const o = JSON.parse(r); if (o && Array.isArray(o.mats)) S = Object.assign(base(), o); } } catch (e) {}
+  try { const u = JSON.parse(localStorage.getItem(LSUI) || 'null'); if (u && u.tab) { UI.tab = u.tab === 'hoja' ? 'res' : u.tab; UI.ver = u.ver || 'opt'; } } catch (e) {}
+}
+function guardarLocal() { try { localStorage.setItem(LS, JSON.stringify(S)); } catch (e) {} }
+function guardarUI() { try { localStorage.setItem(LSUI, JSON.stringify({ tab: UI.tab, ver: UI.ver })); } catch (e) {} }
+let dbRef = null, pushT = null, pushing = false, pend = false;
+function guardar(cambiaPedido) {
+  S.t = Date.now(); S.ejemplo = false;
+  if (cambiaPedido && S.plan) S.dirty = true;
+  guardarLocal(); subir();
+}
+function subir() {
+  if (!dbRef) return;
+  clearTimeout(pushT);
+  pushT = setTimeout(async () => {
+    if (pushing) { pend = true; return; }
+    pushing = true;
+    try { await dbRef.set({ t: S.t, json: JSON.stringify(S) }); $('sync').textContent = 'Guardado en la nube'; }
+    catch (e) { $('sync').textContent = 'Guardado en este dispositivo'; }
+    pushing = false; if (pend) { pend = false; subir(); }
+  }, 2500);
+}
+async function initNube() {
+  try {
+    if (!window.claude || !window.claude.use) return;
+    const db = await window.claude.use('db'); if (!db) return;
+    const ref = db.doc('taller/estado'), snap = await ref.get(), d = snap.exists ? snap.data() : null;
+    dbRef = ref;
+    if (d && d.json && d.t > S.t) { const o = JSON.parse(d.json); if (o && Array.isArray(o.mats)) { S = Object.assign(base(), o); guardarLocal(); render(); } }
+    else if (S.t > 0 && S.t > (d ? d.t : 0)) subir();
+    $('sync').textContent = 'Guardado en la nube';
+  } catch (e) {}
+}
+
+/* ---------- Utilidades de dominio ---------- */
+const mat = id => S.mats.find(m => m.id === id);
+const precioBarra = m => m.modo === 'kg' ? m.precio * m.kgm * m.largo / 1000 : m.precio;
+const txtIng = p => p.ang > 0 ? `${n1(p.ang)}° ${p.ext === 1 ? 'en 1 extremo' : 'en 2 extremos'}, punta ${p.ref}` : '';
+function toast(t) { const e = $('toast'); e.textContent = t; e.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => e.hidden = true, 3200); }
+function selMats(sel, val) {
+  let h = '';
+  TIPOS.forEach(t => { const ms = S.mats.filter(m => m.tipo === t); if (ms.length) h += `<optgroup label="${esc(t)}">` + ms.map(m => `<option value="${m.id}">${esc(m.nombre)}</option>`).join('') + '</optgroup>'; });
+  const prev = val || sel.value; sel.innerHTML = h; if (prev && mat(prev)) sel.value = prev;
+}
+
+/* ---------- Optimizar ---------- */
+function optimizar() {
+  const grupos = S.mats.filter(m => S.piezas.some(p => p.matId === m.id));
+  if (!grupos.length) { S.plan = null; S.dirty = false; return; }
+  const ms = Math.max(80, Math.floor(600 / grupos.length));
+  const plan = { fecha: Date.now(), conf: false, par: Object.assign({}, S.par), mats: [] };
+  grupos.forEach(m => {
+    const ps = S.piezas.filter(p => p.matId === m.id);
+    const retazos = []; if (S.par.usar) S.ret.filter(r => r.matId === m.id).forEach(r => { for (let i = 0; i < r.cant; i++) retazos.push(r.largo); });
+    const r = Corte.resolver({ piezas: ps.map(p => ({ len: Corte.largoReal(p, m.ancho), cant: p.cant })), L: m.largo, kerf: S.par.kerf, desp: S.par.desp, minRet: S.par.minRet, retazos, ms });
+    plan.mats.push({ matId: m.id, nombre: m.nombre, L: m.largo, kgm: m.kgm, pb: precioBarra(m),
+      pz: ps.map(p => ({ et: p.et || '', nom: p.largo, ing: txtIng(p), cant: p.cant })),
+      sinPlan: r.sinPlan, simple: r.simple, opt: r.opt, lb: r.lb, probado: r.probado, noEntra: r.noEntra, ms: r.ms, iter: r.iter });
+  });
+  S.plan = plan; S.hechos = {}; S.dirty = false; UI.abiertas = {};
+}
+/* Indicadores de un material para una variante del plan */
+function ind(pm, ver) {
+  const st = pm[ver].st, pmm = pm.L ? pm.pb / pm.L : 0, k = pm.kgm / 1000;
+  return { barras: st.barras, retUs: st.retUs, tomado: st.tomado, piezas: st.piezas, scrap: st.scrap, util: st.util, viruta: st.viruta,
+    tomadoKg: st.tomado * k, piezasKg: st.piezas * k, scrapKg: st.scrap * k, utilKg: st.util * k, virutaKg: st.viruta * k,
+    compra: st.barras * pm.pb, usado: (st.tomado - st.util) * pmm, desp: (st.scrap + st.viruta) * pmm, aprov: st.aprov, aprov2: st.aprov2 };
+}
+function total(ver) {
+  const t = {}; S.plan.mats.forEach(pm => { const i = ind(pm, ver); for (const k in i) t[k] = (t[k] || 0) + i[k]; });
+  const w = t.tomadoKg > 0 ? 'Kg' : '';
+  t.aprov = t['tomado' + w] ? t['piezas' + w] / t['tomado' + w] : 0; t.aprov2 = t['tomado' + w] ? (t['piezas' + w] + t['util' + w]) / t['tomado' + w] : 0;
+  return t;
+}
+
+/* ---------- Render: Materiales ---------- */
+function renderMat() {
+  let h = `<h2>Catálogo <span class="chip">${S.mats.length} materiales</span></h2>`;
+  TIPOS.forEach(t => {
+    const ms = S.mats.filter(m => m.tipo === t); if (!ms.length) return;
+    h += `<div class="grp"><h3>${esc(t)}</h3>` + ms.map(m => `<div class="item"><div class="main"><b>${esc(m.nombre)}</b>
+      <div class="meta">Barra de ${n1(m.largo)} mm · ${n1x(m.kgm)} kg/m · ${plata(m.precio)} ${m.modo === 'kg' ? 'por kg' : 'por barra'} · ${plata(precioBarra(m))} la barra</div></div>
+      <div class="row"><button class="btn sm" data-act="m-edit" data-id="${m.id}">Editar</button><button class="btn sm danger" data-act="m-del" data-id="${m.id}" data-confirm="¿Seguro?">Borrar</button></div></div>`).join('') + '</div>';
+  });
+  $('m-list').innerHTML = h;
+}
+const n1x = x => (+x).toLocaleString('es-AR', { maximumFractionDigits: 3 });
+
+/* ---------- Render: Cortes ---------- */
+function renderCor() {
+  selMats($('c-mat'));
+  $('p-kerf').value = S.par.kerf; $('p-desp').value = S.par.desp; $('p-min').value = S.par.minRet; $('p-usar').checked = !!S.par.usar;
+  $('c-ej').innerHTML = S.ejemplo ? `<div class="note warn"><p>Esto es un <b>ejemplo</b>: una reja y un portón chico. Vaciá la lista y cargá tu trabajo.</p></div>` : '';
+  let h = `<h2>Lista de cortes <span class="chip">${S.piezas.reduce((s, p) => s + p.cant, 0)} piezas</span></h2>`;
+  if (!S.piezas.length) h += `<p class="hint">Todavía no hay cortes. Cargá el primero arriba: material, largo y cantidad.</p>`;
+  S.mats.forEach(m => {
+    const ps = S.piezas.filter(p => p.matId === m.id); if (!ps.length) return;
+    const tot = ps.reduce((s, p) => s + p.cant * p.largo, 0), cant = ps.reduce((s, p) => s + p.cant, 0);
+    h += `<div class="grp"><h3>${esc(m.nombre)} <span>${cant} piezas · ${n1(tot / 1000)} m · barra de ${n1(m.largo)}</span></h3>` + ps.map(p => {
+      const real = Corte.largoReal(p, m.ancho);
+      return `<div class="item"><div class="main"><b>${p.cant} × ${mm(p.largo)}</b> ${p.et ? esc(p.et) : ''}
+        ${p.ang > 0 ? `<div class="meta">Inglete ${txtIng(p)}${real !== p.largo ? ` · ocupa ${mm(real)} en la barra` : ''}</div>` : ''}</div>
+        <div class="row"><button class="btn sm" data-act="c-edit" data-id="${p.id}">Editar</button><button class="btn sm danger" data-act="c-del" data-id="${p.id}">Borrar</button></div></div>`;
+    }).join('') + '</div>';
+  });
+  $('c-list').innerHTML = h;
+  previewIng();
+}
+function previewIng() {
+  $('c-ingbox').hidden = !$('c-ing').checked;
+  const m = mat($('c-mat').value); if (!m || !$('c-ing').checked) return;
+  const p = { largo: num($('c-largo').value), ang: num($('c-ang').value), ext: +$('c-ext').value, ref: $('c-ref').value };
+  $('c-real').textContent = !m.ancho && p.ref === 'corta' ? 'Este material no tiene cargado el alto del perfil: editalo en Materiales para calcular el inglete.'
+    : p.largo ? `Ocupa ${mm(Corte.largoReal(p, m.ancho))} en la barra (perfil de ${n1(m.ancho)} mm de alto).` : `Perfil de ${n1(m.ancho)} mm de alto.`;
+}
+
+/* ---------- Render: Resultado ---------- */
+const VERS = { sinPlan: 'Sin planificar', simple: 'Simple (FFD)', opt: 'Optimizado' };
+function filas(get, kgmode) {
+  const rows = [['Barras nuevas', i => n0(i.barras), 'barras', -1], ['Retazos usados', i => n0(i.retUs)], ['Aprovechamiento', i => pct(i.aprov), 'aprov', 1], ['Aprov. contando retazos', i => pct(i.aprov2), 'aprov2', 1],
+    ['Scrap', i => kgmode ? kg(i.scrapKg) : `${mm(i.scrap)} · ${kg(i.scrapKg)}`, 'scrapKg', -1], ['Retazo aprovechable', i => kgmode ? kg(i.utilKg) : `${mm(i.util)} · ${kg(i.utilKg)}`],
+    ['Viruta y despunte', i => kgmode ? kg(i.virutaKg) : `${mm(i.viruta)} · ${kg(i.virutaKg)}`], ['Compra de barras', i => plata(i.compra), 'compra', -1],
+    ['Material usado', i => plata(i.usado), 'usado', -1], ['Desperdicio', i => plata(i.desp), 'desp', -1]];
+  const vs = ['sinPlan', 'simple', 'opt'].map(get);
+  return `<div class="tw"><table><thead><tr><th></th><th>Sin planificar</th><th>Simple (FFD)</th><th>Optimizado</th></tr></thead><tbody>` + rows.map(r => {
+    const best = r[2] ? (r[3] < 0 ? Math.min : Math.max)(...vs.map(v => v[r[2]])) : null;
+    return `<tr><td>${r[0]}</td>` + vs.map(v => `<td class="${r[2] && Math.abs(v[r[2]] - best) < 1e-9 ? 'best' : ''}">${r[1](v)}</td>`).join('') + '</tr>';
+  }).join('') + '</tbody></table></div>';
+}
+function barraHTML(pm, ver, b, bi, maxL, nBarra) {
+  const key = `${ver}|${pm.matId}|${bi}|`, nc = b.cortes.length, hechos = b.cortes.filter((c, i) => S.hechos[key + i]).length;
+  const open = UI.abiertas[key];
+  let segs = b.desp > 0 ? `<div class="sg dsp" style="flex-grow:${b.desp}"></div>` : '';
+  b.cortes.forEach((c, i) => { const z = pm.pz[c.p]; segs += `<div class="sg${S.hechos[key + i] ? ' hecho' : ''}" style="flex-grow:${c.l};background:var(--p${c.p % 8})"><span class="ln">${n1(c.l)}</span><span class="et">${esc(z.et)}</span></div>`; });
+  if (b.left > 0) segs += `<div class="sg ${b.util ? 'ret' : 'scr'}" style="flex-grow:${b.left}"><span class="ln">${n1(b.left)}</span><span class="et">${b.util ? 'retazo' : 'scrap'}</span></div>`;
+  let h = `<div class="barcard${hechos === nc ? ' done' : ''}"><button class="barbtn" data-act="bar" data-key="${key}" aria-expanded="${!!open}">
+    <div class="barhead"><span><b>${b.tipo === 'barra' ? 'Barra ' + nBarra : 'Retazo del stock'}</b> · ${mm(b.L)}</span>
+    <span>${b.left > 0 ? `sobra ${mm(b.left)} <span class="chip ${b.util ? 'ok' : 'bad'}">${b.util ? 'retazo' : 'scrap'}</span>` : '<span class="chip ok">sin sobrante</span>'} <span class="chip${hechos === nc ? ' ok' : ''}">${hechos}/${nc} cortes</span></span></div>
+    <div class="bar" style="width:${Math.max(12, b.L / maxL * 100)}%">${segs}</div></button>`;
+  if (open) {
+    let acc = b.desp;
+    h += `<div class="cuts">` + (b.desp > 0 ? `<p class="hint">Primero despuntá ${mm(b.desp)}.</p>` : '') + b.cortes.map((c, i) => {
+      const z = pm.pz[c.p]; acc += c.l + (i ? S.plan.par.kerf : 0); const hc = !!S.hechos[key + i];
+      return `<div class="cut${hc ? ' hecho' : ''}"><span class="n">${i + 1}</span><div class="d"><b>${mm(c.l)}</b> ${esc(z.et)}${z.ing ? `<div class="hint">Inglete ${esc(z.ing)}${z.nom !== c.l ? ` · medida de plano ${mm(z.nom)}` : ''}</div>` : ''}</div>
+        <div class="mk"><small>marca</small><b>${n1(acc)}</b></div><button class="tick" data-act="hecho" data-key="${key + i}" aria-pressed="${hc}" aria-label="Corte hecho">✓</button></div>`;
+    }).join('') + `<p class="hint">Marcas acumuladas desde la punta de la barra, para la cinta. El disco come del lado del sobrante.</p></div>`;
+  }
+  return h + '</div>';
+}
+function renderRes() {
+  const el = $('tab-res'), p = S.plan;
+  if (!p) { el.innerHTML = `<div class="panel"><h2>Resultado</h2><p>${S.piezas.length ? 'Todavía no se calculó el plan de corte.' : 'No hay cortes cargados. Cargalos en la pestaña Cortes.'}</p>${S.piezas.length ? '<button class="btn pri big" data-act="optimizar">Optimizar cortes</button>' : '<button class="btn pri big" data-act="ir-cor">Ir a Cortes</button>'}</div>`; return; }
+  const ver = UI.ver, T = total(ver), T0 = total('sinPlan'), TO = total('opt');
+  let h = '';
+  if (S.ejemplo) h += `<div class="note warn"><p>Estás viendo un <b>ejemplo</b>: una reja y un portón chico con tubo 40x40, planchuela y aletado Ø8.</p><button class="btn sm" data-act="ir-cor">Cargar mi trabajo</button></div>`;
+  if (S.dirty) h += `<div class="note warn"><p>Cambiaste cortes, materiales o parámetros. Este plan quedó viejo.</p><button class="btn pri" data-act="optimizar">Volver a optimizar</button></div>`;
+  const dB = T0.barras - TO.barras, dD = T0.desp - TO.desp, dC = T0.compra - TO.compra;
+  h += `<div class="save"><b>${dB > 0 ? `Ahorrás ${dB} barra${dB > 1 ? 's' : ''} (${plata(dC)})` : dD > 1 ? `Misma cantidad de barras, ${plata(dD)} menos de desperdicio` : 'Mismo resultado que cortando en orden'}</b>
+    <p>Comparado con cortar sin planificar, en el orden de la lista. Retazo aprovechable: ${kg(TO.utilKg)} contra ${kg(T0.utilKg)}.</p></div>`;
+  h += `<div class="seg-ctl" role="group" aria-label="Plan a mostrar">` + Object.keys(VERS).map(v => `<button data-act="ver" data-ver="${v}" aria-pressed="${v === ver}">${VERS[v]}</button>`).join('') + '</div>';
+  h += `<div class="kpis">
+    <div class="kpi"><div class="l">Barras nuevas</div><div class="v">${n0(T.barras)}</div><div class="s">${plata(T.compra)}</div></div>
+    <div class="kpi"><div class="l">Retazos usados</div><div class="v">${n0(T.retUs)}</div><div class="s">del stock</div></div>
+    <div class="kpi"><div class="l">Aprovechamiento</div><div class="v">${pct(T.aprov)}</div><div class="s">${pct(T.aprov2)} contando retazos</div></div>
+    <div class="kpi"><div class="l">Scrap</div><div class="v">${kg(T.scrapKg)}</div><div class="s">+ ${kg(T.virutaKg)} de viruta</div></div>
+    <div class="kpi"><div class="l">Retazo que queda</div><div class="v">${kg(T.utilKg)}</div><div class="s">vuelve al stock</div></div>
+    <div class="kpi"><div class="l">Desperdicio</div><div class="v">${plata(T.desp)}</div><div class="s">de ${plata(T.usado)} usados</div></div></div>`;
+  h += `<div class="panel"><h3>Comparación total</h3>${filas(total, true)}<p class="hint">Material tomado (barras nuevas + retazos usados) = piezas + scrap + viruta y despunte + retazo aprovechable. Aprovechamiento = piezas ÷ material tomado; el total se calcula por peso.</p></div>`;
+  p.mats.forEach(pm => {
+    const pl = pm[ver], I = ind(pm, ver), maxL = Math.max(...pl.bins.map(b => b.L));
+    let nB = 0;
+    h += `<div class="panel"><div class="grp"><h3>${esc(pm.nombre)} <span>${I.barras} barra${I.barras === 1 ? '' : 's'} de ${n1(pm.L)}${I.retUs ? ` + ${I.retUs} retazo${I.retUs > 1 ? 's' : ''}` : ''} · ${pct(I.aprov)}</span></h3></div>
+      <div class="row">${ver === 'opt' ? `<span class="chip ${pm.probado ? 'ok' : ''}">${pm.probado ? 'Mínimo de barras comprobado' : 'Mejor plan encontrado (mínimo teórico: ' + pm.lb + ')'}</span>` : ''}
+      <span class="chip">Scrap ${mm(I.scrap)}</span><span class="chip">Retazo ${mm(I.util)}</span></div>`;
+    if (pm.noEntra.length) h += `<div class="note warn"><p><b>No entran en la barra:</b> ${pm.noEntra.map(x => `${x.cant} × ${mm(x.len)} ${esc(pm.pz[x.pi].et)}`).join(', ')}. Quedaron fuera del plan.</p></div>`;
+    h += `<div class="legend">` + pm.pz.map((z, i) => `<span><i style="background:var(--p${i % 8})"></i>${n1(z.nom)} ${esc(z.et)} ×${z.cant}</span>`).join('') + '</div>';
+    h += `<div class="bars">` + pl.bins.map((b, bi) => barraHTML(pm, ver, b, bi, maxL, b.tipo === 'barra' ? ++nB : 0)).join('') + '</div>';
+    h += `<details><summary class="hint" style="cursor:pointer;min-height:44px;display:flex;align-items:center">Ver comparación de ${esc(pm.nombre)}</summary>${filas(v => ind(pm, v), false)}</details></div>`;
+  });
+  h += `<div class="panel"><p class="hint">Tocá una barra para ver sus cortes en orden y tildarlos a medida que los hacés. Las líneas oscuras entre piezas son el paso del disco (${n1(p.par.kerf)} mm).</p>
+    <div class="row"><button class="btn pri grow" data-act="hoja">Hoja de corte para imprimir</button>
+    <button class="btn grow" data-act="confirmar" ${p.conf || S.dirty ? 'disabled' : ''} data-confirm="Tocá otra vez para confirmar">${p.conf ? 'Plan confirmado' : 'Confirmar plan y guardar retazos'}</button></div>
+    <p class="hint">Al confirmar, los retazos usados salen del stock y los sobrantes de ${n1(p.par.minRet)} mm o más entran.</p></div>`;
+  el.innerHTML = h;
+}
+
+/* ---------- Render: Retazos ---------- */
+function renderRet() {
+  selMats($('r-mat'));
+  const tot = S.ret.reduce((s, r) => s + r.cant, 0);
+  let h = `<h2>Stock de retazos <span class="chip">${tot} retazo${tot === 1 ? '' : 's'}</span></h2>`;
+  if (!S.ret.length) h += `<p class="hint">No hay retazos cargados. Agregalos arriba, o confirmá un plan en Resultado para que entren solos.</p>`;
+  S.mats.forEach(m => {
+    const rs = S.ret.filter(r => r.matId === m.id).sort((a, b) => b.largo - a.largo); if (!rs.length) return;
+    const t = rs.reduce((s, r) => s + r.cant * r.largo, 0);
+    h += `<div class="grp"><h3>${esc(m.nombre)} <span>${n1(t / 1000)} m · ${kg(t / 1000 * m.kgm)}</span></h3>` + rs.map(r => `<div class="item"><div class="main"><b>${r.cant} × ${mm(r.largo)}</b></div>
+      <div class="row"><button class="btn sm" data-act="r-edit" data-id="${r.id}">Editar</button><button class="btn sm danger" data-act="r-del" data-id="${r.id}">Borrar</button></div></div>`).join('') + '</div>';
+  });
+  $('r-list').innerHTML = h;
+}
+
+/* ---------- Hoja de corte ---------- */
+const HOJA_CSS = `.hoja h1{font-size:20px;margin:0 0 2px}.hoja h2{font-size:15px;margin:16px 0 6px;border-bottom:2px solid #000;padding-bottom:2px}.hoja h3{font-size:13px;margin:12px 0 4px}
+.hoja table{border-collapse:collapse;width:100%;font-size:12px;margin:0}.hoja th,.hoja td{border:1px solid #777;padding:3px 6px;text-align:right;white-space:nowrap}.hoja th{background:#e6e6e6;color:#000;text-transform:none;letter-spacing:0;font-size:12px}.hoja th:first-child,.hoja td:first-child{text-align:left}
+.hoja .hb{margin:8px 0 10px;break-inside:avoid}.hoja .hbar{display:flex;height:22px;border:1.5px solid #000;margin:3px 0}.hoja .hbar div{border-right:1.5px solid #000;overflow:hidden;font-size:10px;text-align:center;line-height:20px;flex:1 1 0;min-width:1px}
+.hoja .hbar .x{background:repeating-linear-gradient(45deg,#999 0 2px,#fff 2px 6px);border-right:0}.hoja .cj{display:inline-block;width:11px;height:11px;border:1.5px solid #000;vertical-align:-2px}
+.hoja .pie{margin-top:14px;font-size:10px;color:#333}.hoja,.hoja *{-webkit-print-color-adjust:exact;print-color-adjust:exact}`;
+function hojaHTML() {
+  const p = S.plan, f = new Date(p.fecha);
+  let h = `<h1>Hoja de corte</h1><div>${f.toLocaleDateString('es-AR')} · Disco ${n1(p.par.kerf)} mm · Despunte ${n1(p.par.desp)} mm · Retazo útil desde ${n1(p.par.minRet)} mm</div>
+  <h2>Lista de compra</h2><table><thead><tr><th>Material</th><th>Barras nuevas</th><th>Largo de barra</th><th>Peso</th><th>Costo</th><th>Retazos del stock a usar</th></tr></thead><tbody>`;
+  let tc = 0, tk = 0;
+  p.mats.forEach(pm => { const I = ind(pm, 'opt'), kgB = I.barras * pm.L / 1000 * pm.kgm; tc += I.compra; tk += kgB;
+    const rs = pm.opt.bins.filter(b => b.tipo === 'retazo').map(b => n1(b.L)).join(', ');
+    h += `<tr><td>${esc(pm.nombre)}</td><td>${I.barras}</td><td>${mm(pm.L)}</td><td>${kg(kgB)}</td><td>${plata(I.compra)}</td><td>${rs || '-'}</td></tr>`; });
+  h += `<tr><th>Total</th><th></th><th></th><th>${kg(tk)}</th><th>${plata(tc)}</th><th></th></tr></tbody></table>`;
+  p.mats.forEach(pm => {
+    const I = ind(pm, 'opt'); let nB = 0;
+    h += `<h2>${esc(pm.nombre)} · aprovechamiento ${pct(I.aprov)}</h2>`;
+    pm.opt.bins.forEach(b => {
+      let acc = b.desp;
+      h += `<div class="hb"><h3>${b.tipo === 'barra' ? 'Barra ' + (++nB) : 'Retazo del stock'} de ${mm(b.L)}${b.desp ? ` · despuntar ${mm(b.desp)}` : ''} · sobra ${mm(b.left)}${b.left > 0 ? (b.util ? ' (retazo)' : ' (scrap)') : ''}</h3>
+        <div class="hbar" style="width:${Math.max(15, b.L / pm.L * 100)}%">${b.cortes.map(c => `<div style="flex-grow:${c.l}">${n1(c.l)}</div>`).join('')}${b.left > 0 ? `<div class="x" style="flex-grow:${b.left}"></div>` : ''}</div>
+        <table><thead><tr><th>Corte</th><th>Largo</th><th>Marca acumulada</th><th>Hecho</th></tr></thead><tbody>` + b.cortes.map((c, i) => {
+          const z = pm.pz[c.p]; acc += c.l + (i ? p.par.kerf : 0);
+          return `<tr><td>${i + 1}. ${esc(z.et) || 'Pieza'}${z.ing ? ` (inglete ${esc(z.ing)}${z.nom !== c.l ? `, medida de plano ${n1(z.nom)}` : ''})` : ''}</td><td>${mm(c.l)}</td><td>${n1(acc)}</td><td><span class="cj"></span></td></tr>`;
+        }).join('') + '</tbody></table></div>';
+    });
+  });
+  return h + `<div class="pie">Marcas acumuladas desde la punta de la barra; el disco come del lado del sobrante. Hecho con Simulador de Cortes.</div>`;
+}
+
+/* ---------- Archivos ---------- */
+async function bajar(nombre, texto) {
+  try {
+    const d = window.claude && window.claude.use ? await window.claude.use('downloads') : null;
+    if (d) { await d.save({ filename: nombre, data: texto }); toast('Archivo guardado'); return; }
+  } catch (e) { if (e && e.code === 'declined') return; }
+  try {
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿' + texto], { type: 'application/octet-stream' })); a.download = nombre;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  } catch (e) { toast('No se pudo guardar el archivo acá'); }
+}
+const csvNum = x => String(x).replace('.', ',');
+const csvCell = s => /[";\n]/.test(String(s)) ? '"' + String(s).replace(/"/g, '""') + '"' : String(s);
+const csv = rows => rows.map(r => r.map(csvCell).join(';')).join('\r\n');
+function parseCSV(t) {
+  t = t.replace(/^﻿/, ''); const first = t.split(/\r?\n/)[0] || '';
+  const sep = (first.match(/;/g) || []).length >= (first.match(/,/g) || []).length ? ';' : ',';
+  const rows = []; let row = [], cur = '', q = false;
+  for (let i = 0; i < t.length; i++) { const c = t[i];
+    if (q) { if (c === '"') { if (t[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += c; }
+    else if (c === '"') q = true; else if (c === sep) { row.push(cur); cur = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && t[i + 1] === '\n') i++; row.push(cur); cur = ''; if (row.some(x => x.trim())) rows.push(row); row = []; }
+    else cur += c; }
+  row.push(cur); if (row.some(x => x.trim())) rows.push(row);
+  return rows;
+}
+function normMat(o) { return { id: o.id || uid(), tipo: TIPOS.includes(o.tipo) ? o.tipo : 'Otros', nombre: String(o.nombre || o.medida || 'Sin nombre').slice(0, 60), largo: num(o.largo) || 6000, kgm: num(o.kgm), modo: o.modo === 'barra' ? 'barra' : 'kg', precio: num(o.precio), ancho: num(o.ancho) }; }
+function matPorNombre(n) {
+  n = String(n || '').trim(); let m = S.mats.find(x => x.nombre.toLowerCase() === n.toLowerCase());
+  if (!m) { m = normMat({ tipo: 'Otros', nombre: n || 'Sin nombre' }); S.mats.push(m); }
+  return m;
+}
+function importar(texto) {
+  const t = texto.replace(/^﻿/, '').trim();
+  try {
+    if (t[0] === '{' || t[0] === '[') {
+      const o = JSON.parse(t); let msg = [];
+      if (Array.isArray(o.mats)) { S.mats = o.mats.map(normMat); msg.push(S.mats.length + ' materiales'); }
+      if (Array.isArray(o.piezas)) { S.piezas = o.piezas.filter(p => mat(p.matId) && num(p.largo) > 0).map(p => ({ id: uid(), matId: p.matId, largo: num(p.largo), cant: Math.max(1, Math.round(num(p.cant))), et: String(p.et || '').slice(0, 40), ang: num(p.ang), ext: +p.ext === 1 ? 1 : 2, ref: p.ref === 'larga' ? 'larga' : 'corta' })); msg.push(S.piezas.length + ' cortes'); }
+      if (Array.isArray(o.ret)) { S.ret = o.ret.filter(r => mat(r.matId) && num(r.largo) > 0).map(r => ({ id: uid(), matId: r.matId, largo: num(r.largo), cant: Math.max(1, Math.round(num(r.cant))) })); msg.push(S.ret.length + ' retazos'); }
+      if (o.par) S.par = { kerf: num(o.par.kerf), desp: num(o.par.desp), minRet: num(o.par.minRet), usar: !!o.par.usar };
+      if (!msg.length) throw 0;
+      S.plan = null; guardar(false); render(); toast('Importado: ' + msg.join(', ')); return;
+    }
+    const rows = parseCSV(t), head = rows.shift().map(x => x.trim().toLowerCase()), col = n => head.indexOf(n);
+    if (col('cantidad') >= 0 && col('largo_mm') >= 0) {
+      let n = 0; rows.forEach(r => { const largo = num(r[col('largo_mm')]); if (!(largo > 0)) return;
+        const m = matPorNombre(r[col('material')]), ang = col('angulo') >= 0 ? num(r[col('angulo')]) : 0;
+        S.piezas.push({ id: uid(), matId: m.id, largo, cant: Math.max(1, Math.round(num(r[col('cantidad')]))), et: String(r[col('etiqueta')] || '').slice(0, 40), ang, ext: num(r[col('extremos')]) === 1 ? 1 : 2, ref: /larga/i.test(r[col('medida_en')] || '') ? 'larga' : 'corta' }); n++; });
+      guardar(true); render(); toast(`Se agregaron ${n} cortes a la lista`); return;
+    }
+    if (col('medida') >= 0) {
+      let n = 0; rows.forEach(r => { const o = normMat({ tipo: r[col('tipo')], nombre: r[col('medida')], largo: r[col('largo_mm')], kgm: r[col('kg_m')], precio: r[col('precio')], modo: /barra/i.test(r[col('precio_por')] || '') ? 'barra' : 'kg', ancho: r[col('alto_perfil_mm')] });
+        const ex = S.mats.find(x => x.nombre.toLowerCase() === o.nombre.toLowerCase()); if (ex) Object.assign(ex, o, { id: ex.id }); else S.mats.push(o); n++; });
+      guardar(true); render(); toast(`Catálogo actualizado: ${n} materiales`); return;
+    }
+    throw 0;
+  } catch (e) { toast('No reconozco el archivo. Usá uno exportado desde acá como modelo.'); }
+}
+
+/* ---------- Navegación y render general ---------- */
+function irA(tab) { UI.tab = tab; guardarUI(); render(); window.scrollTo(0, 0); }
+function render() {
+  ['mat', 'cor', 'res', 'ret', 'hoja'].forEach(t => { $('tab-' + t).hidden = t !== UI.tab; const b = $('t-' + t); if (b) b.setAttribute('aria-selected', t === UI.tab || (UI.tab === 'hoja' && t === 'res')); });
+  if (UI.tab === 'mat') renderMat(); else if (UI.tab === 'cor') renderCor(); else if (UI.tab === 'res') renderRes(); else if (UI.tab === 'ret') renderRet();
+  else if (UI.tab === 'hoja') $('hoja').innerHTML = hojaHTML();
+}
+function resetM() { editM = null; $('m-form').reset(); $('m-ok').textContent = 'Guardar material'; $('m-sum').textContent = '+ Agregar material'; $('m-det').open = false; }
+function resetC() { editC = null; const m = $('c-mat').value; $('c-form').reset(); $('c-mat').value = m; $('c-ok').textContent = 'Agregar corte'; $('c-title').textContent = 'Cargar corte'; $('c-cancel').hidden = true; previewIng(); }
+function resetR() { editR = null; const m = $('r-mat').value; $('r-form').reset(); $('r-mat').value = m; $('r-ok').textContent = 'Agregar retazo'; $('r-title').textContent = 'Agregar retazo'; $('r-cancel').hidden = true; }
+
+const ACT = {
+  optimizar() { if (!S.piezas.length) { toast('Cargá al menos un corte'); return; } optimizar(); guardar(false); UI.ver = 'opt'; irA('res'); toast('Plan calculado'); },
+  'ir-cor'() { irA('cor'); },
+  ver(b) { UI.ver = b.dataset.ver; guardarUI(); renderRes(); },
+  bar(b) { const k = b.dataset.key; UI.abiertas[k] = !UI.abiertas[k]; renderRes(); },
+  hecho(b) { const k = b.dataset.key; if (S.hechos[k]) delete S.hechos[k]; else S.hechos[k] = 1; S.t = Date.now(); guardarLocal(); subir(); renderRes(); },
+  hoja() { irA('hoja'); },
+  volver() { irA('res'); },
+  imprimir() { try { window.print(); } catch (e) {} },
+  'bajar-hoja'() { bajar('hoja-de-corte.html', `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Hoja de corte</title><style>body{margin:16px;background:#fff}.hoja{font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.35;color:#000}${HOJA_CSS}@media print{button{display:none}}</style></head><body><button onclick="print()" style="font-size:18px;padding:10px 18px;margin-bottom:12px">Imprimir o guardar como PDF</button><div class="hoja">${hojaHTML()}</div></body></html>`); },
+  confirmar() {
+    const p = S.plan; if (!p || p.conf) return;
+    let entran = 0;
+    p.mats.forEach(pm => pm.opt.bins.forEach(b => {
+      if (b.tipo === 'retazo') { const r = S.ret.find(x => x.matId === pm.matId && Math.abs(x.largo - b.L) < 0.05); if (r) { r.cant--; if (r.cant <= 0) S.ret = S.ret.filter(x => x !== r); } }
+      if (b.util) { const r = S.ret.find(x => x.matId === pm.matId && Math.abs(x.largo - b.left) < 0.05); if (r) r.cant++; else S.ret.push({ id: uid(), matId: pm.matId, largo: b.left, cant: 1 }); entran++; }
+    }));
+    p.conf = true; guardar(false); render(); toast(`Plan confirmado: ${entran} retazo${entran === 1 ? '' : 's'} al stock`);
+  },
+  'm-edit'(b) { const m = mat(b.dataset.id); if (!m) return; editM = m.id; $('m-tipo').value = m.tipo; $('m-nombre').value = m.nombre; $('m-largo').value = m.largo; $('m-kgm').value = m.kgm; $('m-precio').value = m.precio; $('m-modo').value = m.modo; $('m-ancho').value = m.ancho || 0;
+    $('m-ok').textContent = 'Guardar cambios'; $('m-sum').textContent = 'Editando: ' + m.nombre; $('m-det').open = true; $('m-det').scrollIntoView({ block: 'start' }); },
+  'm-del'(b) { const id = b.dataset.id; if (S.piezas.some(p => p.matId === id) || S.ret.some(r => r.matId === id)) { toast('Ese material tiene cortes o retazos cargados. Borralos primero.'); return; } S.mats = S.mats.filter(m => m.id !== id); guardar(false); renderMat(); },
+  'm-cancel'() { resetM(); },
+  'c-edit'(b) { const p = S.piezas.find(x => x.id === b.dataset.id); if (!p) return; editC = p.id; $('c-mat').value = p.matId; $('c-largo').value = p.largo; $('c-cant').value = p.cant; $('c-et').value = p.et || ''; $('c-ing').checked = p.ang > 0; $('c-ang').value = p.ang || 45; $('c-ext').value = p.ext || 2; $('c-ref').value = p.ref || 'corta';
+    $('c-ok').textContent = 'Guardar cambios'; $('c-title').textContent = 'Editar corte'; $('c-cancel').hidden = false; previewIng(); window.scrollTo(0, 0); },
+  'c-del'(b) { S.piezas = S.piezas.filter(p => p.id !== b.dataset.id); if (editC === b.dataset.id) resetC(); guardar(true); renderCor(); },
+  'c-cancel'() { resetC(); },
+  'c-clear'() { S.piezas = []; S.plan = null; resetC(); guardar(false); S.dirty = false; guardarLocal(); renderCor(); toast('Lista vacía'); },
+  'r-edit'(b) { const r = S.ret.find(x => x.id === b.dataset.id); if (!r) return; editR = r.id; $('r-mat').value = r.matId; $('r-largo').value = r.largo; $('r-cant').value = r.cant; $('r-ok').textContent = 'Guardar cambios'; $('r-title').textContent = 'Editar retazo'; $('r-cancel').hidden = false; window.scrollTo(0, 0); },
+  'r-del'(b) { S.ret = S.ret.filter(r => r.id !== b.dataset.id); if (editR === b.dataset.id) resetR(); guardar(true); renderRet(); },
+  'r-cancel'() { resetR(); },
+  'exp-cat'() { bajar('catalogo-materiales.csv', csv([['tipo', 'medida', 'largo_mm', 'kg_m', 'precio', 'precio_por', 'alto_perfil_mm']].concat(S.mats.map(m => [m.tipo, m.nombre, csvNum(m.largo), csvNum(m.kgm), csvNum(m.precio), m.modo, csvNum(m.ancho || 0)])))); },
+  'exp-cor'() { bajar('lista-de-cortes.csv', csv([['material', 'largo_mm', 'cantidad', 'etiqueta', 'angulo', 'extremos', 'medida_en']].concat(S.piezas.map(p => [(mat(p.matId) || {}).nombre || '', csvNum(p.largo), p.cant, p.et || '', csvNum(p.ang || 0), p.ext || 2, p.ang > 0 ? 'punta ' + p.ref : ''])))); },
+  'exp-todo'() { bajar('simulador-de-cortes.json', JSON.stringify({ app: 'simulador-de-cortes', v: 1, mats: S.mats, piezas: S.piezas, ret: S.ret, par: S.par }, null, 1)); },
+  imp() { $('imp-file').value = ''; $('imp-file').click(); },
+  reset() { S = base(); optimizar(); S.t = Date.now(); S.ejemplo = true; guardarLocal(); subir(); UI.ver = 'opt'; irA('res'); toast('Ejemplo restaurado'); }
+};
+
+document.addEventListener('click', e => {
+  const tab = e.target.closest('[data-tab]'); if (tab) { irA(tab.dataset.tab); return; }
+  const b = e.target.closest('[data-act]'); if (!b || b.disabled) return;
+  if (b.dataset.confirm && !b.dataset.armed) {
+    const txt = b.textContent; b.dataset.armed = '1'; b.textContent = b.dataset.confirm;
+    setTimeout(() => { if (b.isConnected && b.dataset.armed) { delete b.dataset.armed; b.textContent = txt; } }, 3500); return;
+  }
+  const f = ACT[b.dataset.act]; if (f) f(b);
+});
+$('m-form').addEventListener('submit', e => { e.preventDefault();
+  const o = { tipo: $('m-tipo').value, nombre: $('m-nombre').value.trim(), largo: num($('m-largo').value), kgm: num($('m-kgm').value), precio: num($('m-precio').value), modo: $('m-modo').value, ancho: num($('m-ancho').value) };
+  if (!o.nombre || !(o.largo > 0)) { toast('Completá la medida y el largo de barra'); return; }
+  if (editM) Object.assign(mat(editM), o); else S.mats.push(Object.assign({ id: uid() }, o));
+  resetM(); guardar(true); renderMat(); toast('Material guardado'); });
+$('c-form').addEventListener('submit', e => { e.preventDefault();
+  const m = mat($('c-mat').value), ing = $('c-ing').checked;
+  const o = { matId: m && m.id, largo: num($('c-largo').value), cant: Math.round(num($('c-cant').value)), et: $('c-et').value.trim(), ang: ing ? Math.min(75, Math.max(0, num($('c-ang').value))) : 0, ext: +$('c-ext').value === 1 ? 1 : 2, ref: $('c-ref').value };
+  if (!m || !(o.largo > 0) || !(o.cant > 0)) { toast('Completá material, largo y cantidad'); return; }
+  if (Corte.largoReal(o, m.ancho) + 0 > m.largo - S.par.desp) toast(`Ojo: esa pieza no entra en una barra de ${n1(m.largo)} mm`);
+  if (editC) Object.assign(S.piezas.find(p => p.id === editC), o); else S.piezas.push(Object.assign({ id: uid() }, o));
+  resetC(); guardar(true); renderCor(); $('c-largo').focus(); });
+$('r-form').addEventListener('submit', e => { e.preventDefault();
+  const o = { matId: $('r-mat').value, largo: num($('r-largo').value), cant: Math.round(num($('r-cant').value)) };
+  if (!mat(o.matId) || !(o.largo > 0) || !(o.cant > 0)) { toast('Completá material, largo y cantidad'); return; }
+  if (editR) Object.assign(S.ret.find(r => r.id === editR), o); else { const ex = S.ret.find(r => r.matId === o.matId && r.largo === o.largo); if (ex) ex.cant += o.cant; else S.ret.push(Object.assign({ id: uid() }, o)); }
+  resetR(); guardar(true); renderRet(); });
+['c-ing', 'c-mat', 'c-largo', 'c-ang', 'c-ext', 'c-ref'].forEach(id => $(id).addEventListener('input', previewIng));
+[['p-kerf', 'kerf'], ['p-desp', 'desp'], ['p-min', 'minRet']].forEach(([id, k]) => $(id).addEventListener('change', e => { S.par[k] = Math.max(0, num(e.target.value)); e.target.value = S.par[k]; guardar(true); }));
+$('p-usar').addEventListener('change', e => { S.par.usar = e.target.checked; guardar(true); });
+$('imp-file').addEventListener('change', e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => importar(String(r.result)); r.readAsText(f); });
+
+/* ---------- Arranque ---------- */
+$('m-tipo').innerHTML = TIPOS.map(t => `<option>${esc(t)}</option>`).join('');
+const st = document.createElement('style'); st.textContent = HOJA_CSS; document.head.appendChild(st);
+cargar();
+if (!S.plan && S.piezas.length && S.t === 0) optimizar();   // primera visita: el ejemplo ya resuelto
+selMats($('c-mat'), 't40'); selMats($('r-mat'), 't40');
+render();
+initNube();
+window.__sim = { get S() { return S; }, optimizar };
+})();
+</script>
+
+</body>
+</html>
