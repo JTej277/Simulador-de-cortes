@@ -535,7 +535,7 @@ const EJEMPLO = () => [
   P('al8', 1040, 14, 'Barrote reja'), P('al8', 1720, 9, 'Barrote portón')
 ];
 const EJ_RET = () => [{ id: uid(), matId: 't40', largo: 1450, cant: 1 }, { id: uid(), matId: 'p114', largo: 800, cant: 2 }];
-const base = () => ({ v: 1, t: 0, ejemplo: false, resp: null, mats: CATALOGO(), piezas: [], ret: [], par: { kerf: 3, desp: 0, minRet: 300, usar: true }, plan: null, hechos: {}, dirty: false });
+const base = () => ({ v: 2, t: 0, ejemplo: false, resp: null, mats: CATALOGO(), piezas: [], ret: [], par: { kerf: 3, desp: 0, minRet: 300, usar: true }, plan: null, hechos: {}, dirty: false });
 
 let S = base();
 let UI = { tab: 'cor', ver: 'opt', abiertas: {} };
@@ -543,8 +543,21 @@ let editM = null, editC = null, editR = null;
 const LS = 'simcortes.v1', LSUI = 'simcortes.ui';
 
 /* ---------- Persistencia ---------- */
+/* Datos guardados por la primera versión traían el ejemplo cargado como si fuera trabajo propio: se limpia una sola vez. */
+function migrar(o) {
+  const n = Object.assign(base(), o);
+  if ((o.v || 1) < 2) {
+    const firma = a => (a || []).map(x => [x.matId, x.largo, x.cant].join(':')).sort().join('|');
+    if (o.ejemplo || firma(n.piezas) === firma(EJEMPLO())) {
+      n.piezas = []; if (firma(n.ret) === firma(EJ_RET())) n.ret = [];
+      n.plan = null; n.hechos = {}; n.dirty = false; n.ejemplo = false; n.resp = null; n.t = Date.now();
+    }
+    n.v = 2;
+  }
+  return n;
+}
 function cargar() {
-  try { const r = localStorage.getItem(LS); if (r) { const o = JSON.parse(r); if (o && Array.isArray(o.mats)) S = Object.assign(base(), o); } } catch (e) {}
+  try { const r = localStorage.getItem(LS); if (r) { const o = JSON.parse(r); if (o && Array.isArray(o.mats)) { S = migrar(o); guardarLocal(); } } } catch (e) {}
   try { const u = JSON.parse(localStorage.getItem(LSUI) || 'null'); if (u && u.tab) { UI.tab = u.tab === 'hoja' ? 'res' : u.tab; UI.ver = u.ver || 'opt'; } } catch (e) {}
 }
 function guardarLocal() { try { localStorage.setItem(LS, JSON.stringify(S)); } catch (e) {} }
@@ -572,7 +585,7 @@ async function initNube() {
     const db = await window.claude.use('db'); if (!db) return;
     const ref = db.doc('taller/estado'), snap = await ref.get(), d = snap.exists ? snap.data() : null;
     dbRef = ref;
-    if (d && d.json && d.t > S.t) { const o = JSON.parse(d.json); if (o && Array.isArray(o.mats)) { S = Object.assign(base(), o); guardarLocal(); render(); } }
+    if (d && d.json && d.t > S.t) { const o = JSON.parse(d.json); if (o && Array.isArray(o.mats)) { S = migrar(o); guardarLocal(); render(); if (S.t > d.t) subir(); } }
     else if (S.t > 0 && S.t > (d ? d.t : 0)) subir();
     $('sync').textContent = 'Guardado en la nube';
   } catch (e) {}
