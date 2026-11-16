@@ -2,6 +2,14 @@
 
 Optimizador de cortes (cutting stock 1D) para perfiles de acero y varillas en barras de 6 m o 12 m, pensado para usar en el taller desde el celular.
 
+## Cómo acceder
+
+- **Página web:** https://jtej277.github.io/Simulador-de-cortes/ (GitHub Pages, publicada desde la rama `main`). No hace falta cuenta ni instalar nada; cada dispositivo guarda sus propios datos.
+- **Artifact en Claude:** https://claude.ai/artifact/63UaFWQEQmDU7CZDUeuGAS (hay que tener acceso compartido por el dueño).
+- **Sin conexión:** descargá `index.html` y abrilo en el navegador.
+
+## Archivos
+
 - `index.html`: la aplicación completa en un solo archivo. Se abre directo en el navegador, sin instalar nada.
 - `src/simulador.html`: fuente de la página (es lo que se publica como artifact).
 - `build.mjs`: genera `index.html` a partir de la fuente (`node build.mjs`).
