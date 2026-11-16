@@ -261,6 +261,7 @@ td.best{font-weight:700}
 </section>
 
 <section class="tab" id="tab-ret" hidden>
+  <div id="r-ej"></div>
   <div class="panel">
     <h2 id="r-title">Agregar retazo</h2>
     <form id="r-form" class="grid" autocomplete="off">
@@ -276,11 +277,11 @@ td.best{font-weight:700}
   <div class="panel" id="r-list"></div>
   <div class="panel">
     <h3>Copia de seguridad</h3>
-    <p class="hint">Un solo archivo con catálogo, cortes, retazos y parámetros.</p>
+    <p class="hint">Un solo archivo con catálogo, cortes, retazos y parámetros. "Borrar todo" vacía cortes y retazos y vuelve al catálogo original.</p>
     <div class="row">
       <button class="btn grow" data-act="exp-todo">Exportar todo (JSON)</button>
       <button class="btn grow" data-act="imp">Importar CSV o JSON</button>
-      <button class="btn danger grow" data-act="reset" data-confirm="Tocá otra vez: se borra todo">Volver al ejemplo</button>
+      <button class="btn danger grow" data-act="reset" data-confirm="Tocá otra vez: se borra todo">Borrar todo</button>
     </div>
   </div>
 </section>
@@ -541,10 +542,11 @@ const EJEMPLO = () => [
   P('p114', 1420, 4, 'Travesaño reja'), P('p114', 920, 3, 'Travesaño portón'), P('p114', 250, 2, 'Pasador'), P('p114', 120, 6, 'Bisagra'), P('p114', 60, 8, 'Oreja de fijación'),
   P('al8', 1040, 14, 'Barrote reja'), P('al8', 1720, 9, 'Barrote portón')
 ];
-const base = () => ({ v: 1, t: 0, ejemplo: true, mats: CATALOGO(), piezas: EJEMPLO(), ret: [{ id: uid(), matId: 't40', largo: 1450, cant: 1 }, { id: uid(), matId: 'p114', largo: 800, cant: 2 }], par: { kerf: 3, desp: 0, minRet: 300, usar: true }, plan: null, hechos: {}, dirty: false });
+const EJ_RET = () => [{ id: uid(), matId: 't40', largo: 1450, cant: 1 }, { id: uid(), matId: 'p114', largo: 800, cant: 2 }];
+const base = () => ({ v: 1, t: 0, ejemplo: false, resp: null, mats: CATALOGO(), piezas: [], ret: [], par: { kerf: 3, desp: 0, minRet: 300, usar: true }, plan: null, hechos: {}, dirty: false });
 
 let S = base();
-let UI = { tab: 'res', ver: 'opt', abiertas: {} };
+let UI = { tab: 'cor', ver: 'opt', abiertas: {} };
 let editM = null, editC = null, editR = null;
 const LS = 'simcortes.v1', LSUI = 'simcortes.ui';
 
@@ -557,7 +559,7 @@ function guardarLocal() { try { localStorage.setItem(LS, JSON.stringify(S)); } c
 function guardarUI() { try { localStorage.setItem(LSUI, JSON.stringify({ tab: UI.tab, ver: UI.ver })); } catch (e) {} }
 let dbRef = null, pushT = null, pushing = false, pend = false;
 function guardar(cambiaPedido) {
-  S.t = Date.now(); S.ejemplo = false;
+  S.t = Date.now();
   if (cambiaPedido && S.plan) S.dirty = true;
   guardarLocal(); subir();
 }
@@ -625,6 +627,15 @@ function total(ver) {
   return t;
 }
 
+/* ---------- Ejemplo guiado ---------- */
+const AYUDA = {
+  cor: 'Es el pedido de una reja y un portón chico, agrupado por material. Fijate en la diagonal del portón: lleva inglete medido en punta corta y por eso ocupa más largo en la barra. Podés cambiar lo que quieras y tocar "Optimizar cortes".',
+  res: 'Arriba está el ahorro contra cortar sin planificar. Tocá una barra para ver sus cortes en orden, con la marca para la cinta, y tildalos a medida que los hacés. Con los tres botones comparás los planes.',
+  ret: 'Estos retazos estaban en el stock antes de empezar: el plan usa los que le sirven. Si confirmás el plan en Resultado, salen los usados y entran los sobrantes nuevos.'
+};
+const bannerEj = tab => S.ejemplo ? `<div class="note warn"><p class="grow"><b>Ejemplo.</b> ${AYUDA[tab]}</p><button class="btn sm" data-act="salir-ej">Salir del ejemplo</button></div>` : '';
+const invitaEj = `<div class="note"><p class="grow">¿Primera vez? Mirá un trabajo resuelto: una reja y un portón chico.</p><button class="btn sm" data-act="ejemplo">Ver ejemplo</button></div>`;
+
 /* ---------- Render: Materiales ---------- */
 function renderMat() {
   let h = `<h2>Catálogo <span class="chip">${S.mats.length} materiales</span></h2>`;
@@ -642,7 +653,7 @@ const n1x = x => (+x).toLocaleString('es-AR', { maximumFractionDigits: 3 });
 function renderCor() {
   selMats($('c-mat'));
   $('p-kerf').value = S.par.kerf; $('p-desp').value = S.par.desp; $('p-min').value = S.par.minRet; $('p-usar').checked = !!S.par.usar;
-  $('c-ej').innerHTML = S.ejemplo ? `<div class="note warn"><p>Esto es un <b>ejemplo</b>: una reja y un portón chico. Vaciá la lista y cargá tu trabajo.</p></div>` : '';
+  $('c-ej').innerHTML = S.ejemplo ? bannerEj('cor') : invitaEj;
   let h = `<h2>Lista de cortes <span class="chip">${S.piezas.reduce((s, p) => s + p.cant, 0)} piezas</span></h2>`;
   if (!S.piezas.length) h += `<p class="hint">Todavía no hay cortes. Cargá el primero arriba: material, largo y cantidad.</p>`;
   S.mats.forEach(m => {
@@ -701,10 +712,10 @@ function barraHTML(pm, ver, b, bi, maxL, nBarra) {
 }
 function renderRes() {
   const el = $('tab-res'), p = S.plan;
-  if (!p) { el.innerHTML = `<div class="panel"><h2>Resultado</h2><p>${S.piezas.length ? 'Todavía no se calculó el plan de corte.' : 'No hay cortes cargados. Cargalos en la pestaña Cortes.'}</p>${S.piezas.length ? '<button class="btn pri big" data-act="optimizar">Optimizar cortes</button>' : '<button class="btn pri big" data-act="ir-cor">Ir a Cortes</button>'}</div>`; return; }
+  if (!p) { el.innerHTML = `<div class="panel"><h2>Resultado</h2><p>${S.piezas.length ? 'Todavía no se calculó el plan de corte.' : 'No hay cortes cargados. Cargalos en la pestaña Cortes.'}</p>${S.piezas.length ? '<button class="btn pri big" data-act="optimizar">Optimizar cortes</button>' : '<button class="btn pri big" data-act="ir-cor">Ir a Cortes</button>'}</div>${bannerEj('res') || invitaEj}`; return; }
   const ver = UI.ver, T = total(ver), T0 = total('sinPlan'), TO = total('opt');
   let h = '';
-  if (S.ejemplo) h += `<div class="note warn"><p>Estás viendo un <b>ejemplo</b>: una reja y un portón chico con tubo 40x40, planchuela y aletado Ø8.</p><button class="btn sm" data-act="ir-cor">Cargar mi trabajo</button></div>`;
+  h += bannerEj('res');
   if (S.dirty) h += `<div class="note warn"><p>Cambiaste cortes, materiales o parámetros. Este plan quedó viejo.</p><button class="btn pri" data-act="optimizar">Volver a optimizar</button></div>`;
   const dB = T0.barras - TO.barras, dD = T0.desp - TO.desp, dC = T0.compra - TO.compra;
   h += `<div class="save"><b>${dB > 0 ? `Ahorrás ${dB} barra${dB > 1 ? 's' : ''} (${plata(dC)})` : dD > 1 ? `Misma cantidad de barras, ${plata(dD)} menos de desperdicio` : 'Mismo resultado que cortando en orden'}</b>
@@ -740,6 +751,7 @@ function renderRes() {
 function renderRet() {
   selMats($('r-mat'));
   const tot = S.ret.reduce((s, r) => s + r.cant, 0);
+  $('r-ej').innerHTML = bannerEj('ret');
   let h = `<h2>Stock de retazos <span class="chip">${tot} retazo${tot === 1 ? '' : 's'}</span></h2>`;
   if (!S.ret.length) h += `<p class="hint">No hay retazos cargados. Agregalos arriba, o confirmá un plan en Resultado para que entren solos.</p>`;
   S.mats.forEach(m => {
@@ -888,7 +900,18 @@ const ACT = {
   'exp-cor'() { bajar('lista-de-cortes.csv', csv([['material', 'largo_mm', 'cantidad', 'etiqueta', 'angulo', 'extremos', 'medida_en']].concat(S.piezas.map(p => [(mat(p.matId) || {}).nombre || '', csvNum(p.largo), p.cant, p.et || '', csvNum(p.ang || 0), p.ext || 2, p.ang > 0 ? 'punta ' + p.ref : ''])))); },
   'exp-todo'() { bajar('simulador-de-cortes.json', JSON.stringify({ app: 'simulador-de-cortes', v: 1, mats: S.mats, piezas: S.piezas, ret: S.ret, par: S.par }, null, 1)); },
   imp() { $('imp-file').value = ''; $('imp-file').click(); },
-  reset() { S = base(); optimizar(); S.t = Date.now(); S.ejemplo = true; guardarLocal(); subir(); UI.ver = 'opt'; irA('res'); toast('Ejemplo restaurado'); }
+  reset() { S = base(); S.t = Date.now(); guardarLocal(); subir(); UI.ver = 'opt'; irA('cor'); toast('Todo borrado. Catálogo original restaurado.'); },
+  ejemplo() {
+    if (!S.ejemplo) S.resp = { piezas: S.piezas, ret: S.ret, plan: S.plan, hechos: S.hechos, dirty: S.dirty };   // tu trabajo queda guardado aparte
+    CATALOGO().filter(m => ['t40', 'p114', 'al8'].includes(m.id) && !mat(m.id)).forEach(m => S.mats.push(m));
+    S.piezas = EJEMPLO(); S.ret = EJ_RET(); S.ejemplo = true; resetC(); resetR();
+    optimizar(); guardar(false); UI.ver = 'opt'; irA('res'); toast('Ejemplo cargado');
+  },
+  'salir-ej'() {
+    const r = S.resp || {};
+    S.piezas = r.piezas || []; S.ret = r.ret || []; S.plan = r.plan || null; S.hechos = r.hechos || {}; S.dirty = !!r.dirty;
+    S.resp = null; S.ejemplo = false; resetC(); resetR(); guardar(false); irA('cor'); toast('Volviste a tu trabajo');
+  }
 };
 
 document.addEventListener('click', e => {
@@ -926,7 +949,6 @@ $('imp-file').addEventListener('change', e => { const f = e.target.files[0]; if 
 $('m-tipo').innerHTML = TIPOS.map(t => `<option>${esc(t)}</option>`).join('');
 const st = document.createElement('style'); st.textContent = HOJA_CSS; document.head.appendChild(st);
 cargar();
-if (!S.plan && S.piezas.length && S.t === 0) optimizar();   // primera visita: el ejemplo ya resuelto
 selMats($('c-mat'), 't40'); selMats($('r-mat'), 't40');
 render();
 initNube();
