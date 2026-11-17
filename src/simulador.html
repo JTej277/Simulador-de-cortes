@@ -81,6 +81,18 @@ details.add>summary::-webkit-details-marker{display:none}
 .item .main{flex:1 1 180px;min-width:0}
 .item .main b{font-size:1.1rem}
 .item .meta{color:var(--muted);font-size:.88rem;overflow-wrap:anywhere}
+details.fam{border-bottom:1px solid var(--line)}
+details.fam:last-child{border-bottom:0}
+details.fam>summary{list-style:none;cursor:pointer;min-height:56px;display:flex;align-items:center;justify-content:space-between;gap:10px;font:700 1.15rem var(--display)}
+details.fam>summary::-webkit-details-marker{display:none}
+details.fam>summary::before{content:"+";font-size:1.4rem;width:1em;color:var(--muted);flex:none}
+details.fam[open]>summary::before{content:"–"}
+details.fam>summary span.nm{flex:1}
+.dimrow{display:flex;gap:8px 12px;align-items:center;flex-wrap:wrap;padding:8px 0 8px 1.6em;border-top:1px dashed var(--line)}
+.dimrow>b{flex:0 0 5.5em;font-size:1.1rem;overflow-wrap:anywhere}
+.dimrow .esps{display:flex;gap:8px;flex-wrap:wrap;flex:1 1 200px}
+.espbtn{appearance:none;border:2px solid var(--line);background:var(--surface);color:var(--ink);border-radius:6px;min-height:48px;padding:4px 12px;cursor:pointer;font:600 1rem var(--body);display:flex;flex-direction:column;align-items:flex-start;justify-content:center;line-height:1.15}
+.espbtn small{font-weight:500;font-size:.75rem;color:var(--muted)}
 .chip{display:inline-block;font-size:.75rem;font-weight:700;padding:2px 7px;border-radius:99px;border:1px solid var(--line);color:var(--muted);text-transform:uppercase;letter-spacing:.03em;white-space:nowrap}
 .chip.ok{background:var(--ok-bg);color:var(--ok);border-color:var(--ok)}
 .chip.bad{background:var(--bad-bg);color:var(--bad);border-color:var(--bad)}
@@ -169,8 +181,9 @@ td.best{font-weight:700}
   <details class="add panel" id="m-det">
     <summary class="btn pri big" id="m-sum">+ Agregar material</summary>
     <form id="m-form" class="grid" autocomplete="off">
-      <label class="f">Tipo<select id="m-tipo"></select></label>
-      <label class="f">Medida o sección<input type="text" id="m-nombre" placeholder='Ej. Ángulo 1¼" x 1/8"' required></label>
+      <label class="f wide">Material<input type="text" id="m-tipo" list="m-fams" placeholder="Ej. Tubo estructural cuadrado" maxlength="40" required><datalist id="m-fams"></datalist></label>
+      <label class="f">Dimensiones<input type="text" id="m-dim" placeholder="Ej. 40x40" maxlength="30" required></label>
+      <label class="f">Espesor (si tiene)<input type="text" id="m-esp" placeholder="Ej. 1,6 mm" maxlength="20"></label>
       <label class="f">Largo de barra (mm)<input type="number" id="m-largo" inputmode="numeric" min="1" step="1" value="6000" required></label>
       <label class="f">Peso (kg/m)<input type="number" id="m-kgm" inputmode="decimal" min="0" step="0.001" value="0"></label>
       <label class="f">Precio<input type="number" id="m-precio" inputmode="decimal" min="0" step="0.01" value="0"></label>
@@ -179,10 +192,11 @@ td.best{font-weight:700}
       <div class="row wide" style="grid-column:1/-1">
         <button class="btn pri grow" type="submit" id="m-ok">Guardar material</button>
         <button class="btn" type="button" data-act="m-cancel">Cancelar</button>
+        <button class="btn danger" type="button" data-act="m-del" id="m-del" data-confirm="¿Seguro?" hidden>Borrar</button>
       </div>
     </form>
   </details>
-  <div class="note"><p class="hint">Los precios y pesos precargados son de referencia. Poné los de tu proveedor: de ahí salen los costos.</p></div>
+  <div class="note"><p class="hint">Tocá un material para ver sus dimensiones, y un espesor para editarlo. Los precios y pesos precargados son de referencia: poné los de tu proveedor, de ahí salen los costos.</p></div>
   <div class="panel" id="m-list"></div>
   <div class="panel">
     <h3>Catálogo en archivo</h3>
@@ -197,7 +211,9 @@ td.best{font-weight:700}
   <div class="panel">
     <h2 id="c-title">Cargar corte</h2>
     <form id="c-form" class="grid" autocomplete="off">
-      <label class="f wide">Material<select id="c-mat"></select></label>
+      <label class="f wide">Material<select id="c-fam"></select></label>
+      <label class="f">Dimensiones<select id="c-dim"></select></label>
+      <label class="f" id="c-espl">Espesor<select id="c-mat"></select></label>
       <label class="f">Largo (mm)<input type="number" id="c-largo" inputmode="decimal" min="1" step="0.1" required></label>
       <label class="f">Cantidad<input type="number" id="c-cant" inputmode="numeric" min="1" step="1" value="1" required></label>
       <label class="f wide">Etiqueta (opcional)<input type="text" id="c-et" placeholder="Ej. parante puerta" maxlength="40"></label>
@@ -257,7 +273,9 @@ td.best{font-weight:700}
   <div class="panel">
     <h2 id="r-title">Agregar retazo</h2>
     <form id="r-form" class="grid" autocomplete="off">
-      <label class="f wide">Material<select id="r-mat"></select></label>
+      <label class="f wide">Material<select id="r-fam"></select></label>
+      <label class="f">Dimensiones<select id="r-dim"></select></label>
+      <label class="f" id="r-espl">Espesor<select id="r-mat"></select></label>
       <label class="f">Largo (mm)<input type="number" id="r-largo" inputmode="decimal" min="1" step="0.1" required></label>
       <label class="f">Cantidad<input type="number" id="r-cant" inputmode="numeric" min="1" step="1" value="1" required></label>
       <div class="row" style="grid-column:1/-1">
@@ -512,21 +530,39 @@ const num = v => { let s = String(v == null ? '' : v).trim().replace(/\s/g, '');
 
 const TIPOS = ['Tubo estructural cuadrado', 'Tubo estructural rectangular', 'Caño redondo', 'Ángulo (L)', 'Planchuela', 'Perfil UPN', 'Perfil IPN', 'Perfil C', 'Varilla lisa', 'Hierro aletado (ADN 420)', 'Barra maciza cuadrada', 'Barra maciza redonda', 'Otros'];
 const PKG = 3000; // $/kg de ejemplo
-const M = (id, t, nombre, kgm, ancho, largo) => ({ id, tipo: TIPOS[t], nombre, largo: largo || 6000, kgm, modo: 'kg', precio: PKG, ancho });
+/* Cada material es Material (familia) + Dimensiones + Espesor. El nombre completo se arma con esos tres datos. */
+const CORTO = { 'Tubo estructural cuadrado': 'Tubo', 'Tubo estructural rectangular': 'Tubo', 'Caño redondo': 'Caño', 'Ángulo (L)': 'Ángulo', 'Perfil UPN': 'UPN', 'Perfil IPN': 'IPN', 'Varilla lisa': 'Lisa', 'Hierro aletado (ADN 420)': 'Aletado', 'Barra maciza cuadrada': 'Cuadrado macizo', 'Barra maciza redonda': 'Redondo macizo', 'Otros': '' };
+const corto = t => t in CORTO ? CORTO[t] : t;
+const nombreMat = m => (corto(m.tipo) + ' ' + m.dim + (m.esp ? ' x ' + m.esp : '')).trim();
+const M = (id, t, dim, esp, kgm, ancho, largo) => { const m = { id, tipo: TIPOS[t], dim, esp: esp || '', largo: largo || 6000, kgm, modo: 'kg', precio: PKG, ancho }; m.nombre = nombreMat(m); return m; };
+const ID_TUBO = { '20x20_1.25': 't20', '30x30_1.6': 't30', '40x40_1.6': 't40', '50x50_2': 't50', '40x20_1.6': 'r4020', '60x40_2': 'r6040' };   // ids de la primera versión
+const tubo = (a, b, e) => { const k = `${a}x${b}_${e}`; return M(ID_TUBO[k] || 'tb' + k.replace('.', ''), a === b ? 0 : 1, `${a}x${b}`, String(e).replace('.', ',') + ' mm', Math.round((2 * (a + b) * e - 4 * e * e) * 7.85) / 1000, a); };
 const CATALOGO = () => [
-  M('t20', 0, 'Tubo 20x20x1,25', 0.71, 20), M('t30', 0, 'Tubo 30x30x1,6', 1.38, 30), M('t40', 0, 'Tubo 40x40x1,6', 1.88, 40), M('t50', 0, 'Tubo 50x50x2', 2.93, 50),
-  M('r4020', 1, 'Tubo 40x20x1,6', 1.38, 40), M('r6040', 1, 'Tubo 60x40x2', 2.93, 60),
-  M('c1', 2, 'Caño 1" x 1,6', 0.94, 25.4), M('c2', 2, 'Caño 2" x 2', 2.41, 50.8),
-  M('a1', 3, 'Ángulo 1" x 1/8"', 1.19, 25.4), M('a114', 3, 'Ángulo 1¼" x 1/8"', 1.5, 31.8), M('a112', 3, 'Ángulo 1½" x 3/16"', 2.68, 38.1),
-  M('p1', 4, 'Planchuela 1" x 1/8"', 0.63, 25.4), M('p114', 4, 'Planchuela 1¼" x 3/16"', 1.19, 31.8), M('p112', 4, 'Planchuela 1½" x 1/4"', 1.9, 38.1),
-  M('u80', 5, 'UPN 80', 8.64, 80, 12000), M('u100', 5, 'UPN 100', 10.6, 100, 12000),
-  M('i80', 6, 'IPN 80', 5.94, 80, 12000), M('i100', 6, 'IPN 100', 8.34, 100, 12000),
-  M('pc80', 7, 'Perfil C 80x40x15x2', 2.78, 80, 12000), M('pc100', 7, 'Perfil C 100x50x15x2', 3.4, 100, 12000),
-  M('l6', 8, 'Lisa Ø6', 0.222, 6), M('l10', 8, 'Lisa Ø10', 0.617, 10), M('l12', 8, 'Lisa Ø12', 0.888, 12),
-  M('al6', 9, 'Aletado Ø6', 0.222, 6, 12000), M('al8', 9, 'Aletado Ø8', 0.395, 8, 12000), M('al10', 9, 'Aletado Ø10', 0.617, 10, 12000), M('al12', 9, 'Aletado Ø12', 0.888, 12, 12000),
-  M('mc10', 10, 'Cuadrado macizo 10 mm', 0.785, 10), M('mc12', 10, 'Cuadrado macizo ½"', 1.27, 12.7),
-  M('mr16', 11, 'Redondo macizo Ø16', 1.58, 16), M('mr20', 11, 'Redondo macizo Ø20', 2.47, 20)
+  ...[[20, [1.25, 1.6]], [25, [1.25, 1.6]], [30, [1.25, 1.6]], [40, [1.25, 1.6, 2]], [50, [1.25, 1.6, 2]], [60, [1.6, 2]], [80, [1.6, 2, 3.2]], [100, [2, 3.2]]].flatMap(([a, es]) => es.map(e => tubo(a, a, e))),
+  ...[[40, 20, [1.25, 1.6]], [50, 30, [1.25, 1.6]], [60, 40, [1.6, 2]], [80, 40, [1.6, 2]], [100, 50, [2, 3.2]]].flatMap(([a, b, es]) => es.map(e => tubo(a, b, e))),
+  M('c1', 2, '1"', '1,6 mm', 0.94, 25.4), M('c2', 2, '2"', '2 mm', 2.41, 50.8),
+  M('a1', 3, '1"', '1/8"', 1.19, 25.4), M('a114', 3, '1¼"', '1/8"', 1.5, 31.8), M('a112', 3, '1½"', '3/16"', 2.68, 38.1),
+  M('p1', 4, '1"', '1/8"', 0.63, 25.4), M('p114', 4, '1¼"', '3/16"', 1.19, 31.8), M('p112', 4, '1½"', '1/4"', 1.9, 38.1),
+  M('u80', 5, '80', '', 8.64, 80, 12000), M('u100', 5, '100', '', 10.6, 100, 12000),
+  M('i80', 6, '80', '', 5.94, 80, 12000), M('i100', 6, '100', '', 8.34, 100, 12000),
+  M('pc80', 7, '80x40x15', '2 mm', 2.78, 80, 12000), M('pc100', 7, '100x50x15', '2 mm', 3.4, 100, 12000),
+  M('l6', 8, 'Ø6', '', 0.222, 6), M('l10', 8, 'Ø10', '', 0.617, 10), M('l12', 8, 'Ø12', '', 0.888, 12),
+  M('al6', 9, 'Ø6', '', 0.222, 6, 12000), M('al8', 9, 'Ø8', '', 0.395, 8, 12000), M('al10', 9, 'Ø10', '', 0.617, 10, 12000), M('al12', 9, 'Ø12', '', 0.888, 12, 12000),
+  M('mc10', 10, '10 mm', '', 0.785, 10), M('mc12', 10, '½"', '', 1.27, 12.7),
+  M('mr16', 11, 'Ø16', '', 1.58, 16), M('mr20', 11, 'Ø20', '', 2.47, 20)
 ];
+/* Separa un nombre viejo ("Tubo 40x40x1,6") en dimensiones y espesor */
+const CON_ESP = ['Tubo estructural cuadrado', 'Tubo estructural rectangular', 'Caño redondo', 'Ángulo (L)', 'Planchuela', 'Perfil C'];
+function partirNombre(tipo, nombre) {
+  let r = String(nombre || '').trim(); const c = corto(tipo);
+  if (c && r.toLowerCase().startsWith(c.toLowerCase() + ' ')) r = r.slice(c.length).trim();
+  const i = r.toLowerCase().lastIndexOf('x'), nx = (r.toLowerCase().match(/x/g) || []).length;
+  if (CON_ESP.includes(tipo) && i > 0 && nx >= (tipo === 'Perfil C' ? 3 : tipo.startsWith('Tubo') ? 2 : 1)) { let e = r.slice(i + 1).trim(); if (/^[\d.,]+$/.test(e)) e += ' mm'; return { dim: r.slice(0, i).trim(), esp: e }; }
+  return { dim: r || 'Sin medida', esp: '' };
+}
+const normN = x => String(x || '').toLowerCase().replace(/mm|\s/g, '');
+const familias = () => TIPOS.filter(t => S.mats.some(m => m.tipo === t)).concat([...new Set(S.mats.map(m => m.tipo))].filter(t => !TIPOS.includes(t)));
+const matsOrd = () => familias().flatMap(t => S.mats.filter(m => m.tipo === t));
 const P = (matId, largo, cant, et, ang, ext, ref) => ({ id: uid(), matId, largo, cant, et, ang: ang || 0, ext: ext || 2, ref: ref || 'corta' });
 const EJEMPLO = () => [
   P('t40', 1800, 2, 'Parante portón', 45, 2, 'larga'), P('t40', 1000, 2, 'Travesaño portón', 45, 2, 'larga'),
@@ -535,10 +571,10 @@ const EJEMPLO = () => [
   P('al8', 1040, 14, 'Barrote reja'), P('al8', 1720, 9, 'Barrote portón')
 ];
 const EJ_RET = () => [{ id: uid(), matId: 't40', largo: 1450, cant: 1 }, { id: uid(), matId: 'p114', largo: 800, cant: 2 }];
-const base = () => ({ v: 2, t: 0, ejemplo: false, resp: null, mats: CATALOGO(), piezas: [], ret: [], par: { kerf: 3, desp: 0, minRet: 300, usar: true }, plan: null, hechos: {}, dirty: false });
+const base = () => ({ v: 3, t: 0, ejemplo: false, resp: null, mats: CATALOGO(), piezas: [], ret: [], par: { kerf: 3, desp: 0, minRet: 300, usar: true }, plan: null, hechos: {}, dirty: false });
 
 let S = base();
-let UI = { tab: 'cor', ver: 'opt', abiertas: {} };
+let UI = { tab: 'cor', ver: 'opt', abiertas: {}, fams: {} };
 let editM = null, editC = null, editR = null;
 const LS = 'simcortes.v1', LSUI = 'simcortes.ui';
 
@@ -553,6 +589,12 @@ function migrar(o) {
       n.plan = null; n.hechos = {}; n.dirty = false; n.ejemplo = false; n.resp = null; n.t = Date.now();
     }
     n.v = 2;
+  }
+  if (n.v < 3) {                                   // catálogo en tres niveles: material, dimensiones, espesor
+    n.mats.forEach(m => { if (m.dim == null) Object.assign(m, partirNombre(m.tipo, m.nombre)); m.nombre = nombreMat(m); });
+    CATALOGO().forEach(c => { if (!n.mats.some(m => m.id === c.id || normN(m.nombre) === normN(c.nombre))) n.mats.push(c); });
+    if (n.t) n.t = Date.now();
+    n.v = 3;
   }
   return n;
 }
@@ -596,15 +638,27 @@ const mat = id => S.mats.find(m => m.id === id);
 const precioBarra = m => m.modo === 'kg' ? m.precio * m.kgm * m.largo / 1000 : m.precio;
 const txtIng = p => p.ang > 0 ? `${n1(p.ang)}° ${p.ext === 1 ? 'en 1 extremo' : 'en 2 extremos'}, punta ${p.ref}` : '';
 function toast(t) { const e = $('toast'); e.textContent = t; e.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => e.hidden = true, 3200); }
-function selMats(sel, val) {
-  let h = '';
-  TIPOS.forEach(t => { const ms = S.mats.filter(m => m.tipo === t); if (ms.length) h += `<optgroup label="${esc(t)}">` + ms.map(m => `<option value="${m.id}">${esc(m.nombre)}</option>`).join('') + '</optgroup>'; });
-  const prev = val || sel.value; sel.innerHTML = h; if (prev && mat(prev)) sel.value = prev;
+/* Selector en cascada: material → dimensiones → espesor. El select de espesor guarda el id del material. */
+function pick(pre, id) {
+  const fam = $(pre + '-fam'), dim = $(pre + '-dim'), esp = $(pre + '-mat');
+  let m = mat(id) || mat(esp.value) || matsOrd()[0];
+  const opt = (v, t, sel) => `<option value="${esc(v)}"${sel ? ' selected' : ''}>${esc(t)}</option>`;
+  if (!m) { fam.innerHTML = dim.innerHTML = esp.innerHTML = ''; return; }
+  fam.innerHTML = familias().map(t => opt(t, t, t === m.tipo)).join('');
+  const deFam = S.mats.filter(x => x.tipo === m.tipo), dims = [...new Set(deFam.map(x => x.dim))];
+  dim.innerHTML = dims.map(d => opt(d, d, d === m.dim)).join('');
+  const ms = deFam.filter(x => x.dim === m.dim);
+  esp.innerHTML = ms.map(x => opt(x.id, x.esp || 'Único', x.id === m.id)).join('');
+  $(pre + '-espl').hidden = ms.length === 1 && !ms[0].esp;
+}
+function pickEv(pre) {
+  $(pre + '-fam').addEventListener('change', e => { const m = S.mats.find(x => x.tipo === e.target.value); pick(pre, m && m.id); if (pre === 'c') previewIng(); });
+  $(pre + '-dim').addEventListener('change', e => { const m = S.mats.find(x => x.tipo === $(pre + '-fam').value && x.dim === e.target.value); pick(pre, m && m.id); if (pre === 'c') previewIng(); });
 }
 
 /* ---------- Optimizar ---------- */
 function optimizar() {
-  const grupos = S.mats.filter(m => S.piezas.some(p => p.matId === m.id));
+  const grupos = matsOrd().filter(m => S.piezas.some(p => p.matId === m.id));
   if (!grupos.length) { S.plan = null; S.dirty = false; return; }
   const ms = Math.max(80, Math.floor(600 / grupos.length));
   const plan = { fecha: Date.now(), conf: false, par: Object.assign({}, S.par), mats: [] };
@@ -643,25 +697,26 @@ const invitaEj = `<div class="note"><p class="grow">¿Primera vez? Mirá un trab
 
 /* ---------- Render: Materiales ---------- */
 function renderMat() {
-  let h = `<h2>Catálogo <span class="chip">${S.mats.length} materiales</span></h2>`;
-  TIPOS.forEach(t => {
-    const ms = S.mats.filter(m => m.tipo === t); if (!ms.length) return;
-    h += `<div class="grp"><h3>${esc(t)}</h3>` + ms.map(m => `<div class="item"><div class="main"><b>${esc(m.nombre)}</b>
-      <div class="meta">Barra de ${n1(m.largo)} mm · ${n1x(m.kgm)} kg/m · ${plata(m.precio)} ${m.modo === 'kg' ? 'por kg' : 'por barra'} · ${plata(precioBarra(m))} la barra</div></div>
-      <div class="row"><button class="btn sm" data-act="m-edit" data-id="${m.id}">Editar</button><button class="btn sm danger" data-act="m-del" data-id="${m.id}" data-confirm="¿Seguro?">Borrar</button></div></div>`).join('') + '</div>';
+  $('m-fams').innerHTML = [...new Set(TIPOS.concat(familias()))].map(t => `<option value="${esc(t)}"></option>`).join('');
+  let h = `<h2>Catálogo <span class="chip">${S.mats.length} materiales</span></h2><div>`;
+  familias().forEach(t => {
+    const ms = S.mats.filter(m => m.tipo === t), dims = [...new Set(ms.map(m => m.dim))];
+    h += `<details class="fam" data-fam="${esc(t)}"${UI.fams[t] ? ' open' : ''}><summary><span class="nm">${esc(t)}</span><span class="chip">${dims.length} ${dims.length === 1 ? 'medida' : 'medidas'}</span></summary>` +
+      dims.map(d => `<div class="dimrow"><b>${esc(d)}</b><div class="esps">` + ms.filter(m => m.dim === d).map(m =>
+        `<button class="espbtn" data-act="m-edit" data-id="${m.id}" aria-label="Editar ${esc(m.nombre)}">${esc(m.esp || 'Editar')}<small>${(+m.kgm).toLocaleString('es-AR', { maximumFractionDigits: 2 })} kg/m · ${n1(m.largo / 1000)} m</small></button>`).join('') + '</div></div>').join('') + '</details>';
   });
-  $('m-list').innerHTML = h;
+  $('m-list').innerHTML = h + '</div>';
 }
 const n1x = x => (+x).toLocaleString('es-AR', { maximumFractionDigits: 3 });
 
 /* ---------- Render: Cortes ---------- */
 function renderCor() {
-  selMats($('c-mat'));
+  pick('c');
   $('p-kerf').value = S.par.kerf; $('p-desp').value = S.par.desp; $('p-min').value = S.par.minRet; $('p-usar').checked = !!S.par.usar;
   $('c-ej').innerHTML = S.ejemplo ? bannerEj('cor') : invitaEj;
   let h = `<h2>Lista de cortes <span class="chip">${S.piezas.reduce((s, p) => s + p.cant, 0)} piezas</span></h2>`;
   if (!S.piezas.length) h += `<p class="hint">Todavía no hay cortes. Cargá el primero arriba: material, largo y cantidad.</p>`;
-  S.mats.forEach(m => {
+  matsOrd().forEach(m => {
     const ps = S.piezas.filter(p => p.matId === m.id); if (!ps.length) return;
     const tot = ps.reduce((s, p) => s + p.cant * p.largo, 0), cant = ps.reduce((s, p) => s + p.cant, 0);
     h += `<div class="grp"><h3>${esc(m.nombre)} <span>${cant} piezas · ${n1(tot / 1000)} m · barra de ${n1(m.largo)}</span></h3>` + ps.map(p => {
@@ -754,12 +809,12 @@ function renderRes() {
 
 /* ---------- Render: Retazos ---------- */
 function renderRet() {
-  selMats($('r-mat'));
+  pick('r');
   const tot = S.ret.reduce((s, r) => s + r.cant, 0);
   $('r-ej').innerHTML = bannerEj('ret');
   let h = `<h2>Stock de retazos <span class="chip">${tot} retazo${tot === 1 ? '' : 's'}</span></h2>`;
   if (!S.ret.length) h += `<p class="hint">No hay retazos cargados. Agregalos arriba, o confirmá un plan en Resultado para que entren solos.</p>`;
-  S.mats.forEach(m => {
+  matsOrd().forEach(m => {
     const rs = S.ret.filter(r => r.matId === m.id).sort((a, b) => b.largo - a.largo); if (!rs.length) return;
     const t = rs.reduce((s, r) => s + r.cant * r.largo, 0);
     h += `<div class="grp"><h3>${esc(m.nombre)} <span>${n1(t / 1000)} m · ${kg(t / 1000 * m.kgm)}</span></h3>` + rs.map(r => `<div class="item"><div class="main"><b>${r.cant} × ${mm(r.largo)}</b></div>
@@ -825,10 +880,15 @@ function parseCSV(t) {
   row.push(cur); if (row.some(x => x.trim())) rows.push(row);
   return rows;
 }
-function normMat(o) { return { id: o.id || uid(), tipo: TIPOS.includes(o.tipo) ? o.tipo : 'Otros', nombre: String(o.nombre || o.medida || 'Sin nombre').slice(0, 60), largo: num(o.largo) || 6000, kgm: num(o.kgm), modo: o.modo === 'barra' ? 'barra' : 'kg', precio: num(o.precio), ancho: num(o.ancho) }; }
+function normMat(o) {
+  const tipo = String(o.tipo || o.material || '').trim().slice(0, 40) || 'Otros';
+  const pd = o.dim != null && String(o.dim).trim() ? { dim: String(o.dim).trim().slice(0, 30), esp: String(o.esp || '').trim().slice(0, 20) } : partirNombre(tipo, o.nombre || o.medida);
+  const m = { id: o.id || uid(), tipo, dim: pd.dim, esp: pd.esp, largo: num(o.largo) || 6000, kgm: num(o.kgm), modo: o.modo === 'barra' ? 'barra' : 'kg', precio: num(o.precio), ancho: num(o.ancho) };
+  m.nombre = nombreMat(m); return m;
+}
 function matPorNombre(n) {
-  n = String(n || '').trim(); let m = S.mats.find(x => x.nombre.toLowerCase() === n.toLowerCase());
-  if (!m) { m = normMat({ tipo: 'Otros', nombre: n || 'Sin nombre' }); S.mats.push(m); }
+  n = String(n || '').trim(); let m = S.mats.find(x => normN(x.nombre) === normN(n));
+  if (!m) { m = normMat({ tipo: 'Otros', dim: n || 'Sin nombre' }); S.mats.push(m); }
   return m;
 }
 function importar(texto) {
@@ -850,9 +910,9 @@ function importar(texto) {
         S.piezas.push({ id: uid(), matId: m.id, largo, cant: Math.max(1, Math.round(num(r[col('cantidad')]))), et: String(r[col('etiqueta')] || '').slice(0, 40), ang, ext: num(r[col('extremos')]) === 1 ? 1 : 2, ref: /larga/i.test(r[col('medida_en')] || '') ? 'larga' : 'corta' }); n++; });
       guardar(true); render(); toast(`Se agregaron ${n} cortes a la lista`); return;
     }
-    if (col('medida') >= 0) {
-      let n = 0; rows.forEach(r => { const o = normMat({ tipo: r[col('tipo')], nombre: r[col('medida')], largo: r[col('largo_mm')], kgm: r[col('kg_m')], precio: r[col('precio')], modo: /barra/i.test(r[col('precio_por')] || '') ? 'barra' : 'kg', ancho: r[col('alto_perfil_mm')] });
-        const ex = S.mats.find(x => x.nombre.toLowerCase() === o.nombre.toLowerCase()); if (ex) Object.assign(ex, o, { id: ex.id }); else S.mats.push(o); n++; });
+    if (col('medida') >= 0 || col('dimensiones') >= 0) {
+      let n = 0; rows.forEach(r => { const o = normMat({ tipo: r[col('material')] || r[col('tipo')], dim: r[col('dimensiones')], esp: r[col('espesor')], nombre: r[col('medida')], largo: r[col('largo_mm')], kgm: r[col('kg_m')], precio: r[col('precio')], modo: /barra/i.test(r[col('precio_por')] || '') ? 'barra' : 'kg', ancho: r[col('alto_perfil_mm')] });
+        const ex = S.mats.find(x => normN(x.nombre) === normN(o.nombre)); if (ex) Object.assign(ex, o, { id: ex.id }); else S.mats.push(o); n++; });
       guardar(true); render(); toast(`Catálogo actualizado: ${n} materiales`); return;
     }
     throw 0;
@@ -866,9 +926,9 @@ function render() {
   if (UI.tab === 'mat') renderMat(); else if (UI.tab === 'cor') renderCor(); else if (UI.tab === 'res') renderRes(); else if (UI.tab === 'ret') renderRet();
   else if (UI.tab === 'hoja') $('hoja').innerHTML = hojaHTML();
 }
-function resetM() { editM = null; $('m-form').reset(); $('m-ok').textContent = 'Guardar material'; $('m-sum').textContent = '+ Agregar material'; $('m-det').open = false; }
-function resetC() { editC = null; const m = $('c-mat').value; $('c-form').reset(); $('c-mat').value = m; $('c-ok').textContent = 'Agregar corte'; $('c-title').textContent = 'Cargar corte'; $('c-cancel').hidden = true; previewIng(); }
-function resetR() { editR = null; const m = $('r-mat').value; $('r-form').reset(); $('r-mat').value = m; $('r-ok').textContent = 'Agregar retazo'; $('r-title').textContent = 'Agregar retazo'; $('r-cancel').hidden = true; }
+function resetM() { editM = null; $('m-form').reset(); $('m-del').hidden = true; delete $('m-del').dataset.armed; $('m-del').textContent = 'Borrar'; $('m-ok').textContent = 'Guardar material'; $('m-sum').textContent = '+ Agregar material'; $('m-det').open = false; }
+function resetC() { editC = null; const m = $('c-mat').value; $('c-form').reset(); pick('c', m); $('c-ok').textContent = 'Agregar corte'; $('c-title').textContent = 'Cargar corte'; $('c-cancel').hidden = true; previewIng(); }
+function resetR() { editR = null; const m = $('r-mat').value; $('r-form').reset(); pick('r', m); $('r-ok').textContent = 'Agregar retazo'; $('r-title').textContent = 'Agregar retazo'; $('r-cancel').hidden = true; }
 
 const ACT = {
   optimizar() { if (!S.piezas.length) { toast('Cargá al menos un corte'); return; } optimizar(); guardar(false); UI.ver = 'opt'; irA('res'); toast('Plan calculado'); },
@@ -889,19 +949,19 @@ const ACT = {
     }));
     p.conf = true; guardar(false); render(); toast(`Plan confirmado: ${entran} retazo${entran === 1 ? '' : 's'} al stock`);
   },
-  'm-edit'(b) { const m = mat(b.dataset.id); if (!m) return; editM = m.id; $('m-tipo').value = m.tipo; $('m-nombre').value = m.nombre; $('m-largo').value = m.largo; $('m-kgm').value = m.kgm; $('m-precio').value = m.precio; $('m-modo').value = m.modo; $('m-ancho').value = m.ancho || 0;
+  'm-edit'(b) { const m = mat(b.dataset.id); if (!m) return; editM = m.id; $('m-del').hidden = false; $('m-del').dataset.id = m.id; $('m-tipo').value = m.tipo; $('m-dim').value = m.dim; $('m-esp').value = m.esp; $('m-largo').value = m.largo; $('m-kgm').value = m.kgm; $('m-precio').value = m.precio; $('m-modo').value = m.modo; $('m-ancho').value = m.ancho || 0;
     $('m-ok').textContent = 'Guardar cambios'; $('m-sum').textContent = 'Editando: ' + m.nombre; $('m-det').open = true; $('m-det').scrollIntoView({ block: 'start' }); },
-  'm-del'(b) { const id = b.dataset.id; if (S.piezas.some(p => p.matId === id) || S.ret.some(r => r.matId === id)) { toast('Ese material tiene cortes o retazos cargados. Borralos primero.'); return; } S.mats = S.mats.filter(m => m.id !== id); guardar(false); renderMat(); },
+  'm-del'(b) { const id = b.dataset.id; if (S.piezas.some(p => p.matId === id) || S.ret.some(r => r.matId === id)) { toast('Ese material tiene cortes o retazos cargados. Borralos primero.'); return; } S.mats = S.mats.filter(m => m.id !== id); resetM(); guardar(false); renderMat(); toast('Material borrado'); },
   'm-cancel'() { resetM(); },
-  'c-edit'(b) { const p = S.piezas.find(x => x.id === b.dataset.id); if (!p) return; editC = p.id; $('c-mat').value = p.matId; $('c-largo').value = p.largo; $('c-cant').value = p.cant; $('c-et').value = p.et || ''; $('c-ing').checked = p.ang > 0; $('c-ang').value = p.ang || 45; $('c-ext').value = p.ext || 2; $('c-ref').value = p.ref || 'corta';
+  'c-edit'(b) { const p = S.piezas.find(x => x.id === b.dataset.id); if (!p) return; editC = p.id; pick('c', p.matId); $('c-largo').value = p.largo; $('c-cant').value = p.cant; $('c-et').value = p.et || ''; $('c-ing').checked = p.ang > 0; $('c-ang').value = p.ang || 45; $('c-ext').value = p.ext || 2; $('c-ref').value = p.ref || 'corta';
     $('c-ok').textContent = 'Guardar cambios'; $('c-title').textContent = 'Editar corte'; $('c-cancel').hidden = false; previewIng(); window.scrollTo(0, 0); },
   'c-del'(b) { S.piezas = S.piezas.filter(p => p.id !== b.dataset.id); if (editC === b.dataset.id) resetC(); guardar(true); renderCor(); },
   'c-cancel'() { resetC(); },
   'c-clear'() { S.piezas = []; S.plan = null; resetC(); guardar(false); S.dirty = false; guardarLocal(); renderCor(); toast('Lista vacía'); },
-  'r-edit'(b) { const r = S.ret.find(x => x.id === b.dataset.id); if (!r) return; editR = r.id; $('r-mat').value = r.matId; $('r-largo').value = r.largo; $('r-cant').value = r.cant; $('r-ok').textContent = 'Guardar cambios'; $('r-title').textContent = 'Editar retazo'; $('r-cancel').hidden = false; window.scrollTo(0, 0); },
+  'r-edit'(b) { const r = S.ret.find(x => x.id === b.dataset.id); if (!r) return; editR = r.id; pick('r', r.matId); $('r-largo').value = r.largo; $('r-cant').value = r.cant; $('r-ok').textContent = 'Guardar cambios'; $('r-title').textContent = 'Editar retazo'; $('r-cancel').hidden = false; window.scrollTo(0, 0); },
   'r-del'(b) { S.ret = S.ret.filter(r => r.id !== b.dataset.id); if (editR === b.dataset.id) resetR(); guardar(true); renderRet(); },
   'r-cancel'() { resetR(); },
-  'exp-cat'() { bajar('catalogo-materiales.csv', csv([['tipo', 'medida', 'largo_mm', 'kg_m', 'precio', 'precio_por', 'alto_perfil_mm']].concat(S.mats.map(m => [m.tipo, m.nombre, csvNum(m.largo), csvNum(m.kgm), csvNum(m.precio), m.modo, csvNum(m.ancho || 0)])))); },
+  'exp-cat'() { bajar('catalogo-materiales.csv', csv([['material', 'dimensiones', 'espesor', 'largo_mm', 'kg_m', 'precio', 'precio_por', 'alto_perfil_mm']].concat(matsOrd().map(m => [m.tipo, m.dim, m.esp, csvNum(m.largo), csvNum(m.kgm), csvNum(m.precio), m.modo, csvNum(m.ancho || 0)])))); },
   'exp-cor'() { bajar('lista-de-cortes.csv', csv([['material', 'largo_mm', 'cantidad', 'etiqueta', 'angulo', 'extremos', 'medida_en']].concat(S.piezas.map(p => [(mat(p.matId) || {}).nombre || '', csvNum(p.largo), p.cant, p.et || '', csvNum(p.ang || 0), p.ext || 2, p.ang > 0 ? 'punta ' + p.ref : ''])))); },
   'exp-todo'() { bajar('simulador-de-cortes.json', JSON.stringify({ app: 'simulador-de-cortes', v: 1, mats: S.mats, piezas: S.piezas, ret: S.ret, par: S.par }, null, 1)); },
   imp() { $('imp-file').value = ''; $('imp-file').click(); },
@@ -929,8 +989,10 @@ document.addEventListener('click', e => {
   const f = ACT[b.dataset.act]; if (f) f(b);
 });
 $('m-form').addEventListener('submit', e => { e.preventDefault();
-  const o = { tipo: $('m-tipo').value, nombre: $('m-nombre').value.trim(), largo: num($('m-largo').value), kgm: num($('m-kgm').value), precio: num($('m-precio').value), modo: $('m-modo').value, ancho: num($('m-ancho').value) };
-  if (!o.nombre || !(o.largo > 0)) { toast('Completá la medida y el largo de barra'); return; }
+  const o = { tipo: $('m-tipo').value.trim(), dim: $('m-dim').value.trim(), esp: $('m-esp').value.trim(), largo: num($('m-largo').value), kgm: num($('m-kgm').value), precio: num($('m-precio').value), modo: $('m-modo').value, ancho: num($('m-ancho').value) };
+  if (!o.tipo || !o.dim || !(o.largo > 0)) { toast('Completá material, dimensiones y largo de barra'); return; }
+  o.nombre = nombreMat(o); UI.fams[o.tipo] = true;
+  if (S.mats.some(m => m.id !== editM && normN(m.nombre) === normN(o.nombre))) { toast('Ese material ya está en el catálogo'); return; }
   if (editM) Object.assign(mat(editM), o); else S.mats.push(Object.assign({ id: uid() }, o));
   resetM(); guardar(true); renderMat(); toast('Material guardado'); });
 $('c-form').addEventListener('submit', e => { e.preventDefault();
@@ -951,10 +1013,10 @@ $('p-usar').addEventListener('change', e => { S.par.usar = e.target.checked; gua
 $('imp-file').addEventListener('change', e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => importar(String(r.result)); r.readAsText(f); });
 
 /* ---------- Arranque ---------- */
-$('m-tipo').innerHTML = TIPOS.map(t => `<option>${esc(t)}</option>`).join('');
 const st = document.createElement('style'); st.textContent = HOJA_CSS; document.head.appendChild(st);
 cargar();
-selMats($('c-mat'), 't40'); selMats($('r-mat'), 't40');
+pick('c', 't40'); pick('r', 't40'); pickEv('c'); pickEv('r');
+document.addEventListener('toggle', e => { const d = e.target; if (d.classList && d.classList.contains('fam')) UI.fams[d.dataset.fam] = d.open; }, true);
 render();
 initNube();
 window.__sim = { get S() { return S; }, optimizar };
